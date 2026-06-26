@@ -250,12 +250,12 @@ flutter build ipa        # релизная сборка под iOS
       + Flutter-UI). **23 теста проходят** в CI.
 - [x] **Dart CI** — job `example` (`flutter analyze` + `flutter test` через `subosito/flutter-action`)
       рядом со структурным gate. Зелёный CI = доказательство, что код навыка компилируется и проходит тесты.
+- [x] **`LICENSE`** — MIT.
 
 **В работе:**
 - [ ] **9 шаблонов дизайна игр:** casual, coloring, card, puzzle, platformer-flame, endless-runner,
       quiz, educational-kids, ui-heavy.
 - [ ] **Формат-гейт в CI** — добавить `dart format --set-exit-if-changed` после прогона форматтера на машине с SDK.
-- [ ] **`LICENSE`** — добавить файл лицензии.
 
 ---
 
