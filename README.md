@@ -246,12 +246,15 @@ flutter build ipa        # релизная сборка под iOS
 - [x] **`scripts/dart-doctor.py`** — health-check проекта по 8 измерениям (протестирован на синтетике).
 - [x] **Каталог ошибок** `common-pitfalls.md` + 4 скрипта безопасной автоматизации (preflight, safe-run,
       triage-log, pub-cache) с политикой `ci-and-automation.md`.
+- [x] **`examples/memory_match/`** — полная собираемая, протестированная референс-игра (чистое Dart-ядро
+      + Flutter-UI). **23 теста проходят** в CI.
+- [x] **Dart CI** — job `example` (`flutter analyze` + `flutter test` через `subosito/flutter-action`)
+      рядом со структурным gate. Зелёный CI = доказательство, что код навыка компилируется и проходит тесты.
 
 **В работе:**
 - [ ] **9 шаблонов дизайна игр:** casual, coloring, card, puzzle, platformer-flame, endless-runner,
       quiz, educational-kids, ui-heavy.
-- [ ] **`examples/`** — полная собираемая и протестированная референс-игра (чистое Dart-ядро + Flutter-UI).
-- [ ] **Dart CI** — добавить job `dart format`/`analyze`/`dart test` (через `dart-lang/setup-dart`) рядом с примером.
+- [ ] **Формат-гейт в CI** — добавить `dart format --set-exit-if-changed` после прогона форматтера на машине с SDK.
 - [ ] **`LICENSE`** — добавить файл лицензии.
 
 ---
