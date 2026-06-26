@@ -1,8 +1,9 @@
 name: CI
 
-# Structure + content quality gates for the dart-mobile-game-studio skill package.
-# Dart build/test gates (dart format/analyze/test, Patrol) are added together with the example app
-# so they can be verified end-to-end.
+# Two gates:
+#   1. structure — frontmatter/sync/JSON/script-syntax of the skill package (pure python/bash).
+#   2. example   — analyze + test the reference game (examples/memory_match) on a real Flutter SDK,
+#                  which is the end-to-end proof the skill's doctrine produces working code.
 
 on:
   push:
@@ -25,3 +26,25 @@ jobs:
       # and the Cursor globs-format check. Pure python/bash — no Dart toolchain needed.
       - name: Structural quality gate
         run: .agents/skills/dart-mobile-game-studio/scripts/validate-skill.sh
+
+  example:
+    name: Reference game (analyze + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/memory_match
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Flutter version
+        run: flutter --version
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze (pure core + UI)
+        run: flutter analyze
+      - name: Test (pure-Dart core + widget smoke)
+        run: flutter test
+      # Note: `dart format --set-exit-if-changed .` is intentionally not gated yet — add it once
+      # the formatter has run on a machine with the SDK so the check starts from a clean baseline.

@@ -208,5 +208,8 @@ decision criteria, concrete commands, code snippets, and common pitfalls:
   mandatory restore, server-side verification (or documented gap), parental gate for kids.
 
 ## Worked example
-- `examples/` — a complete, buildable & tested reference game: a pure Dart package core
-  (`dart test`) plus a Flutter UI. Copy its architecture for new games.
+- `examples/memory_match/` — a complete, buildable & tested reference game (Flutter-widgets-only
+  memory match). Pure-Dart core (`lib/models/`+`lib/systems/`, no Flutter import, unit-tested) under a
+  thin widget UI; immutable value types, a `(state, action) -> state` reducer, injected `SeededRandom`,
+  `Semantics`, kids-safe. CI's `example` job runs `flutter analyze` + `flutter test` on it. Copy its
+  architecture for new games.

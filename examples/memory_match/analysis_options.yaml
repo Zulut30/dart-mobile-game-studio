@@ -1,0 +1,26 @@
+# Strict-but-CI-friendly analyzer config for the reference game.
+# flutter_lints as the floor; strict language modes on; a few correctness lints
+# promoted. (The skill's assets/analysis_options.yaml is stricter still — this one
+# omits public_member_api_docs so the example stays compact.)
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    avoid_dynamic_calls: error
+    unawaited_futures: error
+    use_build_context_synchronously: error
+    unused_import: error
+    dead_code: error
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+    prefer_const_declarations: true
+    prefer_final_locals: true
+    avoid_print: true
+    use_key_in_widget_constructors: true

@@ -1,0 +1,24 @@
+name: memory_match
+description: >-
+  Reference memory-match game for the dart-mobile-game-studio skill — a pure-Dart
+  core (rules + state machine, no Flutter import, tested with dart/flutter test)
+  under a thin Flutter widgets-only UI. Copy its architecture for new games.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  # No bundled assets: art is placeholder shapes + Material icons (no copyrighted material).

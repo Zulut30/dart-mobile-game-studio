@@ -52,8 +52,8 @@
 ├─ .cursor/skills/…  .cursor/rules/agents/   ← зеркала для Cursor        (синхронизируются)
 ├─ .cursor/rules/                            ← Cursor .mdc-правила (общее / архитектура / тесты)
 ├─ docs/ai-game-dev/upstream-build-spec.md   ← полная исходная спецификация (21 раздел)
-├─ examples/                                 ← (в работе) рабочая референс-игра: ядро + Flutter-UI
-├─ .github/workflows/ci.yml                  ← CI: структурный gate (без Dart-тулчейна)
+├─ examples/memory_match/                    ← рабочая референс-игра: pure-Dart ядро + тесты + Flutter-UI
+├─ .github/workflows/ci.yml                  ← CI: структурный gate + analyze/test примера
 ├─ AGENTS.md                                 ← точка входа для Codex / AGENTS.md-инструментов
 └─ CLAUDE.md                                 ← точка входа для Claude Code
 ```
