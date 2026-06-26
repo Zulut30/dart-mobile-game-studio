@@ -24,6 +24,11 @@ For larger work, play the roles in `.agents/agents/` ("act as the <role> agent")
 - **Release:** `release-engineer` — App Store **and** Google Play readiness.
 See `.agents/agents/README.md`.
 
+**Model tiers.** Each agent declares a `tier` (heavy/medium/light) routing it to a model — heavy on a
+top model (Opus-class / GPT-5.5 xHigh), medium (Sonnet-class / GPT-5.4), light (Haiku-class /
+GPT-5.4-mini). Run heavy + light roles in parallel on their own models. In Codex, resolve the tier to
+your GPT line. Policy + mapping: `.agents/skills/dart-mobile-game-studio/references/model-routing.md`.
+
 ## Build & test command discovery
 Do not assume commands — discover them:
 1. Run `.agents/skills/dart-mobile-game-studio/scripts/verify-flutter-project.sh` to detect a

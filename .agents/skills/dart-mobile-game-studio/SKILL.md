@@ -130,6 +130,10 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
 - `references/ci-and-automation.md` — **safe-automation policy** for unattended/long runs: environment
   preflight, git savepoint/rollback/atomic-commit around destructive steps, build-log triage, and
   `pub get` caching. Maps each hazard to its script and the order to run them.
+- `references/model-routing.md` — **tiered subagents across models**: each of the 14 agents has a
+  `tier` (heavy/medium/light) that routes it to a model (Opus/Sonnet/Haiku on Claude; the GPT line on
+  Codex). `sync-agents.py` resolves tier→`model:`; the coordinator tags each subtask's tier; heavy and
+  light roles run in parallel. Template: `assets/parallel-build.workflow.js`.
 
 ### Policies (the rules agents enforce) — `references/`
 - `references/package-policy.md` — dependency decision order (SDK → official → Flame → mature → DIY) + justification.
@@ -149,7 +153,8 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
 ## Assets (copy & adapt)
 `assets/gdd-template.md`, `assets/level-schema-template.json`, `assets/flame_game_template.dart`,
 `assets/flutter_game_widget_template.dart`, `assets/seeded_random.dart`, `assets/analysis_options.yaml`,
-`assets/review-checklist.md`, `assets/privacy-checklist.md`.
+`assets/review-checklist.md`, `assets/privacy-checklist.md`,
+`assets/parallel-build.workflow.js` (tiered multi-model fan-out — see `references/model-routing.md`).
 
 ## Scripts
 - `scripts/sync-skill.sh` — mirror canonical skill into `.claude/` and `.cursor/` (`--check` for CI).

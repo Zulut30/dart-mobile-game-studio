@@ -46,6 +46,18 @@ if [[ -f .agents/agents/sync-agents.py ]]; then
     n=$(awk -F': *' '/^name:/{print $2; exit}' "$f" | tr -d '[:space:]')
     [[ "$n" == "$(basename "$f" .md)" ]] && pass "agent $(basename "$f")" || err "$f: name '$n' != filename"
   done
+  # Model routing: every canonical agent declares a valid tier; every Claude copy resolves to a model.
+  for f in .agents/agents/*.md; do
+    [[ "$(basename "$f")" == "README.md" ]] && continue
+    t=$(awk -F': *' '/^tier:/{print $2; exit}' "$f" | tr -d '[:space:]')
+    case "$t" in heavy|medium|light) : ;; *) err "$(basename "$f"): missing/invalid tier '$t' (heavy|medium|light)";; esac
+  done
+  for f in .claude/agents/*.md; do
+    [[ -e "$f" ]] || continue
+    m=$(awk -F': *' '/^model:/{print $2; exit}' "$f" | tr -d '[:space:]')
+    case "$m" in opus|sonnet|haiku) : ;; *) err "$(basename "$f" .md): no resolved model '$m' (tier→model failed)";; esac
+  done
+  [[ "${fail}" -eq 0 ]] && pass "agent tiers valid & models resolved"
 else
   echo "  skip (.agents/agents/sync-agents.py not present yet)"
 fi

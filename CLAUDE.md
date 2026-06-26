@@ -26,6 +26,13 @@ Fourteen project subagents live in `.claude/agents/` (generated from canonical s
 Subagents can't spawn each other, so `game-coordinator` returns a delegation plan. See
 `.agents/agents/README.md`.
 
+**Model tiers.** Each agent declares a `tier` (heavy/medium/light) that routes it to a model — on
+Claude Code, `sync-agents.py` resolves it to `model: opus|sonnet|haiku` in the agent's frontmatter
+(heavy=Opus 4.8, medium=Sonnet 4.6, light=Haiku 4.5). Run heavy and light roles **in parallel** on
+their own models (independent `Agent` calls in one message, or the `assets/parallel-build.workflow.js`
+template). Full policy + the cross-vendor (Codex/GPT) mapping:
+[`references/model-routing.md`](.agents/skills/dart-mobile-game-studio/references/model-routing.md).
+
 ## Source of truth & sync
 - **Canonical skill:** `.agents/skills/dart-mobile-game-studio/`. Edit it there.
 - **Canonical agents:** `.agents/agents/`. Edit there, then regenerate tool copies.

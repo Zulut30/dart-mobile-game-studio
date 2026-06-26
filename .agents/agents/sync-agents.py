@@ -24,6 +24,14 @@ CLAUDE_DIR = REPO_ROOT / ".claude" / "agents"
 CURSOR_DIR = REPO_ROOT / ".cursor" / "rules" / "agents"
 SKIP = {"README.md"}
 
+# Tier → tool-specific model. The canonical specs carry a tool-AGNOSTIC `tier`
+# (heavy/medium/light); each tool resolves it to its own model line. Change a model
+# here, not in 14 files. Claude Code reads `model:` from agent frontmatter.
+# (Cross-vendor mapping for Codex/GPT lives in references/model-routing.md.)
+CLAUDE_TIER_MODEL = {"heavy": "opus", "medium": "sonnet", "light": "haiku"}
+TIER_LABEL = {"heavy": "Opus-class", "medium": "Sonnet-class", "light": "Haiku-class"}
+VALID_TIERS = set(CLAUDE_TIER_MODEL)
+
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     if not text.startswith("---"):
@@ -41,13 +49,29 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return fm, body
 
 
-def claude_content(src_text: str) -> str:
-    return src_text if src_text.endswith("\n") else src_text + "\n"
+def claude_content(fm: dict, body: str) -> str:
+    """Rebuild Claude frontmatter, resolving `tier` → `model:` and dropping `tier`
+    (Claude Code understands `model:`, not our tool-agnostic `tier`)."""
+    lines = ["---", f"name: {fm['name']}"]
+    if "description" in fm:
+        lines.append(f"description: {fm['description']}")
+    if "tools" in fm:
+        lines.append(f"tools: {fm['tools']}")
+    model = CLAUDE_TIER_MODEL.get(fm.get("tier", ""))
+    if model:
+        lines.append(f"model: {model}")
+    lines.append("---")
+    return "\n".join(lines) + "\n\n" + body
 
 
 def cursor_content(fm: dict, body: str) -> str:
     desc = fm.get("description", fm.get("name", "Dart/Flutter game subagent role."))
-    return f"---\ndescription: {desc}\nalwaysApply: false\n---\n\n{body}"
+    tier = fm.get("tier", "")
+    note = ""
+    if tier in TIER_LABEL:
+        note = (f"> **Model tier:** {tier} ({TIER_LABEL[tier]}). Resolve per "
+                f"`references/model-routing.md`.\n\n")
+    return f"---\ndescription: {desc}\nalwaysApply: false\n---\n\n{note}{body}"
 
 
 def main(argv: list[str]) -> int:
@@ -67,8 +91,12 @@ def main(argv: list[str]) -> int:
         text = src.read_text(encoding="utf-8")
         fm, body = parse_frontmatter(text)
         name = fm.get("name", src.stem)
+        tier = fm.get("tier", "")
+        if tier not in VALID_TIERS:
+            print(f"warning: {src.name} has no valid tier "
+                  f"(got {tier!r}; expected one of {sorted(VALID_TIERS)})", file=sys.stderr)
         targets = {
-            CLAUDE_DIR / f"{name}.md": claude_content(text),
+            CLAUDE_DIR / f"{name}.md": claude_content(fm, body),
             CURSOR_DIR / f"{name}.mdc": cursor_content(fm, body),
         }
         for path, content in targets.items():

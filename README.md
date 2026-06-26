@@ -104,6 +104,14 @@
   `code-auditor` (вся кодовая база), `security-auditor`, `performance-auditor`, `legal-compliance`.
 - **Релиз:** `release-engineer` — готовность к подаче в **App Store** *и* **Google Play**.
 
+**Мульти-модельная маршрутизация.** У каждого агента есть `tier` (heavy/medium/light), который
+маршрутизирует его на модель: на Claude Code `sync-agents.py` резолвит tier→`model: opus|sonnet|haiku`
+(heavy=Opus 4.8, medium=Sonnet 4.6, light=Haiku 4.5); в Codex — на линейку GPT (5.5 xHigh / 5.4 /
+5.4-mini). Тяжёлые и лёгкие роли запускаются **параллельно** на своих моделях. Раскладка: 8 heavy /
+3 medium / 3 light. Политика и шаблон оркестрации —
+[`references/model-routing.md`](.agents/skills/dart-mobile-game-studio/references/model-routing.md) +
+[`assets/parallel-build.workflow.js`](.agents/skills/dart-mobile-game-studio/assets/parallel-build.workflow.js).
+
 Регенерация копий: `.agents/agents/sync-agents.py`. Подробности — в
 [`.agents/agents/README.md`](.agents/agents/README.md).
 
@@ -137,7 +145,8 @@
 match-3, генерация лабиринтов, разрешимость пятнашек) · `ui-and-animations` · `production-quality` ·
 `codegen-and-boilerplate` · `testing-e2e-patrol` · **`common-pitfalls`** (каталог ошибок:
 приоритеты P0–P3, классификатор кодов, severity, матрица симптом→причина→фикс) · **`ci-and-automation`**
-(политика безопасной автоматизации: preflight, savepoint/rollback, triage, кэш `pub get`).
+(политика безопасной автоматизации: preflight, savepoint/rollback, triage, кэш `pub get`) ·
+**`model-routing`** (tier-маршрутизация 14 агентов по моделям + параллельная оркестрация).
 
 ### `references/dart/` — мастерство Dart
 `README` (планка качества — начните отсюда) · `dart-language-essentials` · `dart-async-isolates` ·
