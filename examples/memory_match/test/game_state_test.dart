@@ -46,7 +46,7 @@ void main() {
 
   group('derived getters', () {
     test('matchedPairs / totalPairs / isWon', () {
-      final won = const GameState(
+      const won = GameState(
         cards: [
           MemoryCard(id: 0, faceId: 0, isFaceUp: true, isMatched: true),
           MemoryCard(id: 1, faceId: 0, isFaceUp: true, isMatched: true),
