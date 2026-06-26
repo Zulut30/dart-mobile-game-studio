@@ -1,0 +1,43 @@
+---
+description: Testing & build rules for Dart/Flutter games — unit-test the pure model with dart test, widget/golden/Patrol tests, honest analyze/build reporting.
+globs: **/*_test.dart, **/test/**/*.dart, **/integration_test/**/*.dart
+alwaysApply: false
+---
+
+# Dart/Flutter game testing & build rules
+
+Applies to test files and any build/test work.
+
+## What to test (priority order)
+1. **Pure model rules** with `dart test` on the VM (fast, no device): legal/illegal moves, scoring,
+   win/lose, level load + validation, every state transition, deterministic (seeded) shuffles/spawns.
+2. **Widgets** with `flutter_test`: `testWidgets`, `WidgetTester`, `pump`/`pumpAndSettle`,
+   `find`/`expect`. **Golden** tests for stable visuals (avoid text in goldens).
+3. **Flame** components (when worth it) with `flame_test` (`testWithGame`, `await game.ready()`,
+   `game.update(dt)`).
+4. **E2E** with **Patrol** (`leancodepl/patrol`): onboarding, purchase/ads flow, game start, level
+   completion, pause/resume, settings, permissions, native dialogs, app lifecycle.
+
+## Determinism & seams
+- Inject a seeded `Random` (`assets/seeded_random.dart`) so randomized outcomes are reproducible.
+- Inject the clock/persistence as seams so tests use fakes; keep the model `package:flutter`-free.
+
+## Commands
+```bash
+dart format --output=none --set-exit-if-changed .
+dart analyze            # or: flutter analyze
+dart test               # pure core (VM)
+flutter test            # widgets + goldens
+patrol test             # E2E (device/emulator)
+```
+Discover via `scripts/verify-flutter-project.sh`.
+
+## Honesty rule
+Only report analyze/build/tests as passing if you ran them and saw the output. If there's no
+toolchain here, say so and provide the exact commands — never assert green.
+
+## Before "done"
+- New model rule / state transition has a `dart test`; non-trivial widget has a `flutter_test`;
+  critical flow has a Patrol E2E. No debug `print`, placeholder, or TODO in the shipped path.
+
+Reference: `references/testing-and-release.md`, `references/quality-policy.md`.

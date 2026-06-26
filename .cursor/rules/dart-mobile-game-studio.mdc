@@ -1,0 +1,45 @@
+---
+description: Dart/Flutter mobile 2D game development studio (iOS, iPadOS, Android) — always-on guidance pointing at the dart-mobile-game-studio skill.
+alwaysApply: true
+---
+
+# Dart Mobile Game Studio (broad rule)
+
+For any Dart / Flutter **mobile game** work, use the **dart-mobile-game-studio** skill. Canonical:
+`.agents/skills/dart-mobile-game-studio/SKILL.md` (Cursor copy: `.cursor/skills/...`). Ground
+decisions in the official Flutter org — **flutter/games** (Casual Games Toolkit) and
+**flame-engine/flame**.
+
+Builds simple 2D games for iOS + Android: coloring, puzzles, platformers, drag-and-drop,
+memory/matching, lite runners, tap-reaction, educational mini-games.
+
+## Always follow this workflow
+1. Understand (genre, age, core verb, fail model, platforms, orientation).
+2. One-page Mini-GDD (`assets/gdd-template.md`).
+3. Choose mode: **Flutter-widgets-only** (CustomPainter) / **Flame** (FlameGame) / **hybrid**
+   (`GameWidget` + overlays). Decision rule: `references/flutter-game-architecture.md`.
+4. Architecture: **pure Dart core (no `package:flutter` import)** + state machine + thin widgets/Flame.
+5. Implement a small MVP from `assets/flame_game_template.dart` / `assets/flutter_game_widget_template.dart`.
+6. Tests: `dart test` for the model; `flutter_test` for widgets; Patrol for E2E.
+7. Build/test with `dart analyze` / `dart test` / `flutter test` / `flutter build` when available.
+8. Review: `scripts/dart-doctor.py`, kids/privacy/a11y/perf (`references/quality-policy.md`).
+9. Hand off: changed files, commands run + output, assumptions, risks.
+
+## Non-negotiables
+- No copyrighted assets — placeholder vector art (`CustomPainter`/`flutter_svg`) or user-owned only.
+- Game rules in pure Dart (no Flutter imports), unit-tested; UI/business/game-logic separated.
+- Minimal dependencies via `references/package-policy.md` (justify each).
+- `flutter analyze`-clean, `dart format`, null-safe, `const`, dispose everything.
+- Accessibility via `Semantics` (label/value/button); text scaling; reduce motion.
+- Kids apps: no tracking/analytics/ads/AdvertisingId/external-links/accounts; offline-first; must
+  satisfy **both** Apple Kids and Google Play Families. Monetization only for general (13+) builds
+  per `references/monetization-policy.md`.
+- Never claim store approval — give a checklist and risks (`references/release-policy.md`).
+- Don't mix Flutter-UI and Flame in one screen without the decision rule.
+
+## Specialist roles (subagents)
+For larger work, adopt one of the 14 roles in `.cursor/rules/agents/` (or paste as a Custom Mode):
+`game-coordinator` → `game-designer` → `engine-architect` → `gameplay-programmer`
+(+ `art-director`, `narrative-writer`, `balance-economist`) → `qa-tester`; review/audit
+`code-reviewer`, `code-auditor`, `security-auditor`, `performance-auditor`, `legal-compliance`;
+release `release-engineer`. Details: `.agents/agents/README.md`.

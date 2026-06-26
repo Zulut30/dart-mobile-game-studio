@@ -1,0 +1,27 @@
+name: CI
+
+# Structure + content quality gates for the dart-mobile-game-studio skill package.
+# Dart build/test gates (dart format/analyze/test, Patrol) are added together with the example app
+# so they can be verified end-to-end.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  structure:
+    name: Validate skill, agents & structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # frontmatter/name==folder, skill+agent sync --check, JSON validity, script syntax,
+      # and the Cursor globs-format check. Pure python/bash — no Dart toolchain needed.
+      - name: Structural quality gate
+        run: .agents/skills/dart-mobile-game-studio/scripts/validate-skill.sh

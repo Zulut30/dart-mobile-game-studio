@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameLevel",
+  "description": "Generic, genre-agnostic level/data schema for simple 2D Flutter games. Coordinates are normalized 0..1 relative to the level size unless absolute=true. Decode with fromJson; keep schemaVersion. Copy and trim fields you don't need.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "size", "entities"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1, "default": 1 },
+    "id": { "type": "string", "description": "Stable level identifier, e.g. 'level_001'." },
+    "name": { "type": "string" },
+    "template": {
+      "type": "string",
+      "enum": [
+        "coloring-shapes",
+        "simple-platformer",
+        "drag-and-drop-puzzle",
+        "memory-cards",
+        "shape-matching",
+        "endless-runner-lite",
+        "tap-reaction"
+      ]
+    },
+    "difficulty": { "type": "integer", "minimum": 0, "maximum": 10, "default": 1 },
+    "seed": { "type": "integer", "description": "Seed for deterministic RNG (shuffles/spawns)." },
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0, "description": "Logical canvas width." },
+        "height": { "type": "number", "exclusiveMinimum": 0, "description": "Logical canvas height." }
+      }
+    },
+    "palette": {
+      "type": "array",
+      "description": "Optional hex colors (#RRGGBB or #AARRGGBB) used by this level.",
+      "items": { "type": "string", "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" }
+    },
+    "entities": {
+      "type": "array",
+      "description": "All placed objects: platforms, hazards, pieces, slots, targets, regions, cards.",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "description": "Genre role, e.g. player|platform|hazard|goal|piece|slot|target|card|region|coin."
+          },
+          "position": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": { "type": "number", "description": "Normalized 0..1 (or logical units if absolute=true)." },
+              "y": { "type": "number" }
+            }
+          },
+          "sizeBox": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": { "w": { "type": "number" }, "h": { "type": "number" } }
+          },
+          "absolute": { "type": "boolean", "default": false },
+          "shape": { "type": "string", "enum": ["circle", "rect", "roundedRect", "triangle", "path", "icon"] },
+          "iconName": { "type": "string", "description": "Material icon name when shape == 'icon'." },
+          "path": {
+            "type": "array",
+            "description": "Normalized path points for shape == 'path' (e.g. coloring regions).",
+            "items": {
+              "type": "object",
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+            }
+          },
+          "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" },
+          "matchGroup": { "type": "string", "description": "Pairs/groups for matching games (cards, piece↔slot)." },
+          "properties": {
+            "type": "object",
+            "description": "Free-form per-entity tuning (e.g. lifetime, speed, isStatic).",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["reachGoal", "matchAll", "fillAll", "scoreAtLeast", "surviveTime", "placeAll"] },
+        "target": { "type": "number" }
+      }
+    },
+    "tuning": {
+      "type": "object",
+      "description": "Optional physics/difficulty tuning. Keep gameplay constants here, not in code.",
+      "additionalProperties": true,
+      "properties": {
+        "gravity": { "type": "number" },
+        "jumpImpulse": { "type": "number" },
+        "moveSpeed": { "type": "number" },
+        "spawnInterval": { "type": "number" },
+        "timeLimit": { "type": "number" }
+      }
+    }
+  }
+}

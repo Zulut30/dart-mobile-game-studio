@@ -1,0 +1,44 @@
+---
+description: Architecture rules for Dart/Flutter game source — separate game logic from rendering, state machine, modular layout, mode decision.
+globs: **/*.dart
+alwaysApply: false
+---
+
+# Dart/Flutter game architecture rules
+
+Applies to Dart source. Keep games testable, adaptable, and small.
+
+## Separate logic from rendering (3 layers)
+- **Game logic** lives in pure Dart with **no `package:flutter` import** (`lib/models/`,
+  `lib/systems/`). It runs and is unit-tested on the Dart VM with `dart test` — no device, no widget
+  pump. A `package:flutter` import in `lib/models/` is a bug.
+- **UI** (`lib/widgets/`) and the **engine layer** (Flame in `lib/game/`) are **thin**: they render
+  the model and translate input into model intents. No game rules in widgets/components.
+
+## Mode decision (pick one; justify)
+- **Flutter-widgets-only** — static/turn-based; `CustomPainter`/`Canvas`, `GestureDetector`/`Draggable`,
+  repaint via `ValueNotifier`/`ListenableBuilder`.
+- **Flame** — continuous motion/physics; `FlameGame` + `Component`/`PositionComponent`,
+  `update(dt)`/`render`, `HasGameReference<MyGame>`, `CollisionCallbacks`; Forge2D for real physics.
+- **Hybrid** — `GameWidget` + overlays for menus/HUD over Flame gameplay.
+Don't mix Flutter-UI and Flame in one screen without this decision (`flutter-game-architecture.md`).
+
+## State machine & state management
+- Explicit `menu → playing → paused → won/lose → menu` as an `enum`/sealed class; transitions are
+  pure methods returning the next state. Test every transition.
+- Shell state: `ValueNotifier`/`ChangeNotifier` is enough for most games; Provider/Riverpod/Bloc only
+  if genuinely needed. The model holds truth; the notifier republishes it.
+
+## Time, determinism, layout
+- Advance by a **clamped** `dt` (`dt.clamp(0.0, 1/30)`); Flame does NOT cap `dt` for you.
+- Inject a seeded `Random` (`assets/seeded_random.dart`); never global `Random()` in game logic.
+- Layout with `LayoutBuilder`/`MediaQuery`/`SafeArea` for phones + tablets; support both orientations.
+
+## Code shape
+- `const` constructors; immutable value-typed models (`final`, `==`/`hashCode`, `copyWith`); small
+  single-purpose files; dispose controllers/notifiers/subscriptions; `flutter analyze`-clean.
+- Levels are JSON **data**, not code (validate vs `assets/level-schema-template.json`).
+- Dependencies via `references/package-policy.md` — justify each; default to none.
+
+Reference: `references/flutter-game-architecture.md`, `references/flutter-flame-patterns.md`,
+`references/dart/README.md`, `references/quality-policy.md`.
