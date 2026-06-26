@@ -100,6 +100,27 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
 - `references/testing-and-release.md` — `dart test`/`flutter test`, build & both-store release.
 - `references/performance-checklist.md` — frame budget, `const`/`RepaintBoundary`, Flame perf, jank.
 - `references/flutter-games-toolkit.md` — using the official flutter/games Casual Games Toolkit.
+- `references/algorithms-for-games.md` — pure-Dart, deterministic game algorithms (pathfinding
+  BFS/Dijkstra/A*, match-3, line-clears, maze/proc-gen, scoring, sliding-puzzle solvability).
+- `references/ui-and-animations.md` — game screens (menu/start/win/settings/shop/onboarding),
+  animated buttons & transitions, implicit/explicit/staggered animation, responsive + Material/Cupertino,
+  reduce-motion gating.
+- `references/production-quality.md` — production patterns distilled from Wonderous/flutter samples:
+  structure, go_router navigation, responsive/adaptive, theming, state-at-scale, UX polish.
+- `references/codegen-and-boilerplate.md` — when (and when not) to use build_runner / freezed /
+  json_serializable / auto_route; generated-file policy; boilerplate guidance.
+- `references/testing-e2e-patrol.md` — the full test pyramid incl. Patrol E2E (native dialogs,
+  permissions, lifecycle); complements testing-and-release.md.
+
+### Policies (the rules agents enforce) — `references/`
+- `references/package-policy.md` — dependency decision order (SDK → official → Flame → mature → DIY) + justification.
+- `references/quality-policy.md` — the production quality bar (layer separation, null-safety, dispose, tests).
+- `references/monetization-policy.md` — ads/IAP/subscriptions with the kids-vs-13+ audience gate.
+- `references/release-policy.md` — App Store + Google Play submission rules and rejection traps.
+
+### Checklists (tick-lists a reviewer/agent runs) — `checklists/`
+`dart-code-quality`, `flutter-ui-quality`, `game-architecture`, `flame-quality`, `performance`,
+`accessibility`, `localization`, `monetization`, `app-store-release`, `google-play-release`, `testing`.
 
 ### Dart mastery (write excellent Dart) — `references/dart/`
 - `references/dart/README.md` — index + the Dart quality bar (start here).
