@@ -192,6 +192,20 @@ decision criteria, concrete commands, code snippets, and common pitfalls:
 - `add-navigation.md` — `go_router` setup, route table, deep-link guards, game-state handoff.
 - `add-save-system.md` — `shared_preferences`/JSON file persistence, migration, encryption gate.
 - `write-tests.md` — unit (pure Dart), widget, integration/Patrol; seeded RNG; golden tests.
+- `debug-common-errors.md` — capture → `triage-log.py` → classify by catalog code → fix cause →
+  re-verify. The cheap debug loop for build/runtime/analyzer/jank failures.
+- `run-performance-audit.md` — `dart-doctor --only performance` → profile-mode on the oldest device →
+  DevTools timeline → kill hot-path alloc / unclamped `dt` / rebuild-the-world / leaks. Target 60/120 fps.
+- `prepare-ios-release.md` — App Store: bundle id, version+build, icons, Info.plist, signing,
+  `flutter build ipa`, App Store Connect, privacy labels, Kids Category. No approval guarantee.
+- `prepare-android-release.md` — Google Play: applicationId, versionCode, `targetSdk`, adaptive icon,
+  upload keystore, `flutter build appbundle`, Data safety, Families. No approval guarantee.
+- `add-monetization.md` — the **audience gate** first (kids → no ads/tracking), then model choice;
+  routes to ads/IAP. Keeps billing at the edge, core pure.
+- `add-ads.md` — `google_mobile_ads`, **13+ only**: ATT/CMP consent, non-personalized fallback,
+  non-intrusive placement, SDK isolated behind an interface.
+- `add-in-app-purchases.md` — `in_app_purchase`: products in both stores, full purchase stream,
+  mandatory restore, server-side verification (or documented gap), parental gate for kids.
 
 ## Worked example
 - `examples/` — a complete, buildable & tested reference game: a pure Dart package core
