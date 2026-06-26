@@ -142,6 +142,25 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
   for *project quality*): environment, architecture, Dart quality, performance, kids-safety,
   accessibility, assets/licensing, build/tests.
 
+## Workflow playbooks — `workflows/`
+Step-by-step recipes the agent executes top-to-bottom. Each file is a self-contained guide with
+decision criteria, concrete commands, code snippets, and common pitfalls:
+
+- `create-new-game.md` — full session: idea → GDD → scaffold → architecture decision → MVP.
+- `choose-game-architecture.md` — Flutter-widgets vs Flame vs hybrid decision tree with
+  tradeoff table, concrete checklist, and anti-patterns.
+- `setup-flutter-project.md` — `flutter create` → analysis options → folder layout → CI stub.
+- `setup-flame-project.md` — Flame dep → pubspec → FlameGame skeleton → dt clamping → first component.
+- `add-game-loop.md` — world state, `update`/`render` cycle, frame-rate independence, pausing.
+- `add-level-system.md` — JSON schema, `LevelRepository`, `LevelLoader`, level-select UI.
+- `add-animations.md` — `AnimationController`/implicit animations, Flame sprite sheets, reduce-motion gate.
+- `add-assets-pipeline.md` — `pubspec.yaml` assets declaration, `flutter_svg`, placeholder shapes, audio.
+- `add-audio.md` — `flame_audio`/`audioplayers`, background music + SFX, mute toggle, lifecycle.
+- `add-state-management.md` — `ValueNotifier`→ Provider → Riverpod progression, game-state binding.
+- `add-navigation.md` — `go_router` setup, route table, deep-link guards, game-state handoff.
+- `add-save-system.md` — `shared_preferences`/JSON file persistence, migration, encryption gate.
+- `write-tests.md` — unit (pure Dart), widget, integration/Patrol; seeded RNG; golden tests.
+
 ## Worked example
 - `examples/` — a complete, buildable & tested reference game: a pure Dart package core
   (`dart test`) plus a Flutter UI. Copy its architecture for new games.
