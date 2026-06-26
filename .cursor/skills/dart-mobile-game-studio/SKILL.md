@@ -54,7 +54,11 @@ Run these in order. Skip a step only with a stated reason.
    deterministic (seeded) shuffles/spawns. `dart test` for the core; `flutter_test` for widgets.
 7. **Run build/test when available.** Use `scripts/verify-flutter-project.sh` to detect a project
    and run `dart analyze` + `dart test` (+ `flutter test`). If you cannot (no toolchain), say so and
-   give the exact commands — do not claim it passed.
+   give the exact commands — do not claim it passed. **In automated / long-running runs**, gate first
+   with `scripts/flutter-preflight.sh --require …` (environment + clean git), skip redundant installs
+   with `scripts/pub-get-if-changed.sh`, fence any codegen/`clean`/build in `scripts/safe-run.sh`
+   (savepoint → atomic commit on success / rollback on failure), and pipe failing build logs through
+   `scripts/triage-log.py`. See `references/ci-and-automation.md`.
 8. **Review.** Run `scripts/dart-doctor.py <project>`, then sweep `references/common-pitfalls.md` (the
    analyzer-invisible classes: layout constraints, Flame hot-path/lifecycle/collision, layering —
    tag findings by code + severity) and walk `assets/review-checklist.md`: child safety, privacy,
@@ -84,6 +88,10 @@ Pick the closest and adapt (full recipes in `references/game-templates.md`):
   no external links, no accounts, no dark patterns; offline-first; no personal data. Must satisfy
   **both** Apple Kids Category **and** Google Play Families policy.
 - **No compliance guarantees.** Produce a checklist and a risk list, never "store-approved".
+- **Savepoint before destructive commands.** Never run codegen (`build_runner`), `flutter clean`, or
+  a platform build on an unknown/dirty tree in an automated run. Preflight the environment, then fence
+  the command in `scripts/safe-run.sh` so a half-run never persists. Don't assume a toolchain is
+  installed — check with `scripts/flutter-preflight.sh` and report honestly if it's absent.
 
 ## Fallback behavior (defaults when details are missing)
 Build a small polished MVP and document assumptions: ages 4–8, no-fail; support both orientations,
@@ -119,6 +127,9 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
   tripwire/bad→good/AI-rule, a symptom→cause→fix matrix, generation defaults, and a built-in review
   prompt. Open it first when reviewing or debugging; generate to its defaults. The `code-reviewer` and
   `code-auditor` agents tag findings with its codes.
+- `references/ci-and-automation.md` — **safe-automation policy** for unattended/long runs: environment
+  preflight, git savepoint/rollback/atomic-commit around destructive steps, build-log triage, and
+  `pub get` caching. Maps each hazard to its script and the order to run them.
 
 ### Policies (the rules agents enforce) — `references/`
 - `references/package-policy.md` — dependency decision order (SDK → official → Flame → mature → DIY) + justification.
@@ -149,6 +160,19 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
 - `scripts/dart-doctor.py` — project health-check CLI (the analog of swift-doctor / `flutter doctor`
   for *project quality*): environment, architecture, Dart quality, performance, kids-safety,
   accessibility, assets/licensing, build/tests.
+
+### Safe automation (use in automated / long-running runs) — see `references/ci-and-automation.md`
+- `scripts/flutter-preflight.sh` — run FIRST: gate the toolchain (`--require dart,flutter,android,xcode`),
+  git workspace (`--git-clean`), and project before a build/codegen step. Degrades gracefully (reports
+  MISSING with install hints instead of crashing later). `--json` for machine output.
+- `scripts/safe-run.sh` — fence a destructive/generative command (build_runner, `flutter clean`) in a
+  git savepoint: `--stash` → run → `--commit` atomic `chore(auto):` commit on success, or auto
+  rollback (`reset --hard` + `clean -fd`) on failure. `--triage` summarizes a failing log. The net
+  only auto-rolls-back when it can prove no work is lost.
+- `scripts/triage-log.py` — distill a 1000s-line Gradle/Xcode/Dart build log to ~10–25 high-signal
+  lines + a ranked likely-cause list (so a small model gets a clean input, not 2000 lines of noise).
+- `scripts/pub-get-if-changed.sh` — skip `pub get` when `pubspec.lock` is unchanged (hash cached in
+  gitignored `.dart_tool/`); `--check-only` exits 10 if stale. Turns a slow re-init into a no-op.
 
 ## Workflow playbooks — `workflows/`
 Step-by-step recipes the agent executes top-to-bottom. Each file is a self-contained guide with
