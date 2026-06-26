@@ -19,6 +19,7 @@ device** where a box says "no jank" — debug-mode numbers don't count.
 - [ ] `StatefulWidget` is used **only** to own a disposable (controller/notifier/focus/subscription/ticker), never to hold data that changes.
 - [ ] UI reads the model through the **smallest** listenable slice: `ValueListenableBuilder<T>` for one value, `Selector` for one derived slice — not a top-level `ListenableBuilder`/`Consumer` that rebuilds the whole screen.
 - [ ] No `setState()` that rebuilds a whole screen/subtree for a single changed field (score, lives, timer); each is its own `ValueNotifier` + builder.
+- [ ] No `setState()`/`showDialog()`/`Navigator.push()`/`ScaffoldMessenger.of()` called **inside** `build()` (it can run every frame) — derive UI from state, or defer to `addPostFrameCallback` (`FLUTTER_LIFECYCLE_SETSTATE`).
 - [ ] `AnimatedBuilder`/`ListenableBuilder` pass the static part via the `child:` argument so it is built once, not every tick.
 - [ ] The listenable seam lives in the pure core or a thin Flutter adapter — `package:flutter` does not leak into `models/`/`systems/`.
 
@@ -39,7 +40,9 @@ device** where a box says "no jank" — debug-mode numbers don't count.
 - [ ] The game surface is wrapped in `SafeArea` so the board/HUD clear notches, status bar, and home indicator.
 - [ ] Layout is derived from constraints (`LayoutBuilder` / `MediaQuery`), never fixed pixels; the play area is sized off `min(maxWidth, maxHeight)` to stay square/proportional.
 - [ ] HUD/layout adapts between tall phone (top/bottom bar) and wide tablet/landscape (side panel) off an aspect-ratio or width threshold, verified on both a small phone and a large tablet.
-- [ ] Portrait/landscape swaps use `OrientationBuilder`; no layout overflows ("yellow-and-black stripes") at any supported size or orientation.
+- [ ] Portrait/landscape swaps use `OrientationBuilder`; no layout overflows ("yellow-and-black stripes") at any supported size or orientation (`FLUTTER_LAYOUT_CONSTRAINTS`).
+- [ ] No unbounded scrollable: a `ListView`/`GridView`/`Column`-of-many inside a `Column`/`Flex` is wrapped in `Expanded`/`Flexible`/a fixed-height `SizedBox` — never left to "unbounded height". Long lists are `.builder`, not a literal `children:`.
+- [ ] `Expanded`/`Flexible` sit **directly** under `Row`/`Column`/`Flex`, `Positioned` under `Stack`, `TableCell` under `Table` — no `Incorrect use of ParentDataWidget` (hoist the parent-data widget above any `Padding`/`Center` wrapper).
 - [ ] `MediaQuery` is subscribed via the targeted `*Of` accessors (`MediaQuery.sizeOf`/`.orientationOf`/`.textScalerOf`) so unrelated MediaQuery changes don't rebuild.
 - [ ] `CustomPainter` geometry scales off the passed `Size` (and `devicePixelRatio` when caching), never hard-coded pixels.
 

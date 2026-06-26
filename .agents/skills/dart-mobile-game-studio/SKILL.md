@@ -48,14 +48,17 @@ Run these in order. Skip a step only with a stated reason.
    `assets/flutter_game_widget_template.dart`. Small files, modular folders
    (`lib/models/`, `lib/systems/`, `lib/game/`, `lib/widgets/`, `assets/`). Recipes in
    `references/game-templates.md`. **Write excellent Dart** — meet the quality bar in
-   `references/dart/README.md`. Mirror the worked example in `examples/`.
+   `references/dart/README.md` and generate to the defaults in `references/common-pitfalls.md`
+   (so the common Dart/Flutter/Flame bugs never land). Mirror the worked example in `examples/`.
 6. **Add tests.** Cover the pure model: legal moves, scoring, win/lose, level loading, transitions,
    deterministic (seeded) shuffles/spawns. `dart test` for the core; `flutter_test` for widgets.
 7. **Run build/test when available.** Use `scripts/verify-flutter-project.sh` to detect a project
    and run `dart analyze` + `dart test` (+ `flutter test`). If you cannot (no toolchain), say so and
    give the exact commands — do not claim it passed.
-8. **Review.** Run `scripts/dart-doctor.py <project>` then walk `assets/review-checklist.md`: child
-   safety, privacy, accessibility, performance. See `references/accessibility-child-safety.md`.
+8. **Review.** Run `scripts/dart-doctor.py <project>`, then sweep `references/common-pitfalls.md` (the
+   analyzer-invisible classes: layout constraints, Flame hot-path/lifecycle/collision, layering —
+   tag findings by code + severity) and walk `assets/review-checklist.md`: child safety, privacy,
+   accessibility, performance. See `references/accessibility-child-safety.md`.
 9. **Handoff.** Report: what you built, chosen mode and why, **changed files**, **commands run with
    real output** (or why none ran), assumptions, open risks, next steps.
 
@@ -111,6 +114,11 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
   json_serializable / auto_route; generated-file policy; boilerplate guidance.
 - `references/testing-e2e-patrol.md` — the full test pyramid incl. Patrol E2E (native dialogs,
   permissions, lifecycle); complements testing-and-release.md.
+- `references/common-pitfalls.md` — **the review-&-generation catalog**: the top mistakes that break
+  Dart/Flutter/Flame games, ranked P0–P3, with an error classifier (codes + severity), per-class
+  tripwire/bad→good/AI-rule, a symptom→cause→fix matrix, generation defaults, and a built-in review
+  prompt. Open it first when reviewing or debugging; generate to its defaults. The `code-reviewer` and
+  `code-auditor` agents tag findings with its codes.
 
 ### Policies (the rules agents enforce) — `references/`
 - `references/package-policy.md` — dependency decision order (SDK → official → Flame → mature → DIY) + justification.

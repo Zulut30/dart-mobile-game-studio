@@ -446,7 +446,7 @@ GameWidget<MyGame>.controlled(
 
 > Keep score/lives in a `ValueNotifier` the Flame game owns and the Flutter HUD overlay watches with
 > `ValueListenableBuilder` — one notifier, two readers (the in-game `TextComponent` HUD and the Flutter
-> overlay), one source of truth. Details of the Flame side live in `dart-flame-mastery.md`.
+> overlay), one source of truth. Details of the Flame side live in `../flutter-flame-patterns.md`.
 
 ## The widget-layer bar in miniature
 

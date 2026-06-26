@@ -7,13 +7,13 @@ renderer (Flutter widgets or Flame) so it unit-tests on the VM with no device.
 
 | File | Read when you are… |
 |---|---|
-| [dart-language-essentials.md](dart-language-essentials.md) | writing any model/rule: sound null-safety, value-typed immutable classes (`const` + `copyWith`), `==`/`hashCode`, `enum`, collections, immutability, library privacy (`_`) |
+| [dart-language-essentials.md](dart-language-essentials.md) | writing any model/rule: sound null-safety, value-typed immutable classes (`const` + `copyWith`), `==`/`hashCode`, `enum`, **`sealed`/`final`/`base` modifiers + exhaustive `switch` + records & patterns** for the state machine, collections, library privacy (`_`) |
 | [dart-api-design.md](dart-api-design.md) | naming a type/method/field; designing a public surface; Effective-Dart naming; required vs optional/named params; making illegal states unrepresentable |
-| [dart-sealed-pattern-matching.md](dart-sealed-pattern-matching.md) | modelling the state machine (`menu → playing → paused → win/lose`): `sealed`/`final`/`base` class modifiers, exhaustive `switch` expressions, records, destructuring & guard patterns |
 | [dart-async-isolates.md](dart-async-isolates.md) | loading levels/assets, async work, never blocking the UI isolate: `Future`/`async`/`await`, `Stream`, `Isolate.run` for heavy CPU work, cancellation & error handling |
-| [dart-flutter-mastery.md](dart-flutter-mastery.md) | building menus/HUD/settings or a Flutter-widgets-only game: granular rebuilds, `ValueNotifier`/`ChangeNotifier`, `CustomPainter`, gestures, `Semantics`, `dispose` |
-| [dart-flame-mastery.md](dart-flame-mastery.md) | building a Flame or hybrid game: `FlameGame`/`Component`/`PositionComponent`, the `update(dt)`/`render(canvas)` loop, `HasGameReference`, `CollisionCallbacks`, `GameWidget` |
-| [dart-patterns-idioms.md](dart-patterns-idioms.md) | reaching for factory constructors, `Comparable`, JSON `fromJson`/`toJson` for level data, extension methods, a seeded injected `Random`, pure state-machine reducers |
+| [flutter-widgets-mastery.md](flutter-widgets-mastery.md) | building menus/HUD/settings or a Flutter-widgets-only game: granular rebuilds, `ValueNotifier`/`ChangeNotifier`, `CustomPainter`, gestures, `Semantics`, `dispose` |
+| [dart-memory-performance.md](dart-memory-performance.md) | tuning the core at the language level: allocation & GC pressure, object pooling, value vs reference, growable-list traps, `const` canonicalization — the hot-path discipline behind 60/120 FPS |
+| [dart-patterns-idioms.md](dart-patterns-idioms.md) | reaching for `copyWith`, factory constructors, `Comparable`, versioned JSON `fromJson`/`toJson` for level/save data, extension methods, a seeded injected `Random`, a `Vec2`, pure `reduce(state, event)` state-machine reducers |
+| [../flutter-flame-patterns.md](../flutter-flame-patterns.md) | building a Flame or hybrid game: `FlameGame`/`Component`/`PositionComponent`, the `update(dt)`/`render(canvas)` loop, `HasGameReference`, `CollisionCallbacks`, `GameWidget` (top-level ref, not under `dart/`) |
 
 ## The Dart quality bar (apply to every file you write)
 
@@ -46,6 +46,11 @@ renderer (Flutter widgets or Flame) so it unit-tests on the VM with no device.
 10. **Analyzer-clean under strong lints.** Zero analyzer issues with the shipped rule set; treat
     infos and warnings as errors in CI. `prefer_const_constructors`, `avoid_dynamic_calls`,
     `require_trailing_commas`, and friends stay on.
+
+> **Reviewing or debugging, not just writing?** Open [../common-pitfalls.md](../common-pitfalls.md) —
+> the catalog of the mistakes that actually break Dart/Flutter/Flame games (classifier codes,
+> severity, symptom→cause→fix). It covers the high-blast defects a green analyzer **won't** catch
+> (Flutter layout constraints, Flame per-frame allocation, `dt`-less motion, asset lifecycle).
 
 ## Do / Don't (the bar in miniature)
 

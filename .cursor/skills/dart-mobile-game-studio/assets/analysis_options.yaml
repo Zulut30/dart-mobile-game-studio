@@ -7,6 +7,14 @@
 #
 # Uses flutter_lints (ships with Flutter). For an even stricter set, depend on `very_good_analysis`
 # and replace the include below with `package:very_good_analysis/analysis_options.yaml`.
+#
+# SCOPE — what lints CANNOT catch. The analyzer catches Dart-level sins (a `!` on parsed JSON, an
+# un-cancelled subscription, a `dynamic` call, an unawaited Future). It is BLIND to the highest-blast
+# defects in `references/common-pitfalls.md`: Flutter layout/constraint errors (RenderFlex overflow,
+# unbounded height, ParentDataWidget mismatch), per-frame allocation in a Flame `update`/`render`,
+# `dt`-less movement, `fromCache`-before-`load`, and loop/UI/domain layering. Those need the catalog
+# + the `flame-quality` / `flutter-ui-quality` checklists in review — a green analyzer is necessary,
+# not sufficient.
 
 include: package:flutter_lints/flutter.yaml
 
@@ -17,11 +25,13 @@ analyzer:
     strict-raw-types: true
   errors:
     # Correctness issues that should never ship — promote to errors.
-    avoid_dynamic_calls: error
-    cancel_subscriptions: error
+    avoid_dynamic_calls: error          # DART_DYNAMIC_TYPING — no untyped calls in domain code
+    cancel_subscriptions: error         # FLUTTER_MEMORY_LEAK — every StreamSubscription cancelled
     close_sinks: error
     invalid_use_of_protected_member: error
-    unawaited_futures: error
+    unawaited_futures: error            # DART_ASYNC_AWAIT — Futures in async bodies handled
+    discarded_futures: error            # DART_ASYNC_AWAIT — Futures in SYNC bodies not silently dropped
+    use_build_context_synchronously: error  # DART_CONTEXT_ACROSS_ASYNC — no context across an await gap
     # Keep the build clean.
     unused_import: error
     unused_local_variable: error
@@ -37,7 +47,8 @@ linter:
     prefer_const_constructors: true
     prefer_const_constructors_in_immutables: true
     prefer_const_declarations: true
-    prefer_final_locals: true
+    prefer_const_literals_to_create_immutables: true   # const the children: [] lists too
+    prefer_final_locals: true            # DART_MUTABLE_STATE — final by default
     prefer_final_fields: true
     # Safety
     avoid_print: true                 # use a logger; no stray prints in the play path
@@ -50,8 +61,12 @@ linter:
     sort_constructors_first: true
     # Flutter widget hygiene
     use_key_in_widget_constructors: true
-    avoid_unnecessary_containers: true
+    avoid_unnecessary_containers: true        # FLUTTER_RENDER_COST — no wrapper Containers
     sized_box_for_whitespace: true
-    use_build_context_synchronously: true
+    use_build_context_synchronously: true     # DART_CONTEXT_ACROSS_ASYNC (severity → errors above)
+    no_logic_in_create_state: true            # FLUTTER_LIFECYCLE_SETSTATE — createState only news the State
+    # Render-cost hygiene (cheaper than a Container that triggers a layer)
+    use_decorated_box: true                   # FLUTTER_RENDER_COST
+    use_colored_box: true                     # FLUTTER_RENDER_COST
     # Docs (loose — don't require docs on everything)
     public_member_api_docs: false
