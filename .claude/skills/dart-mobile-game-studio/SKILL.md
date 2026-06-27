@@ -31,7 +31,9 @@ Run these in order. Skip a step only with a stated reason.
 
 1. **Understand the game request.** Genre, target age, core verb (tap / drag / match / move),
    win/lose vs no-fail, session length, platforms (iOS + Android), orientation.
-2. **Generate a Mini-GDD.** Use `assets/gdd-template.md`. One page.
+2. **Generate a Mini-GDD.** Start from the closest genre brief in `templates/<genre>.md` (it ships a
+   filled Mini-GDD + an architecture skeleton for the genre), then refine with `assets/gdd-template.md`.
+   One page.
 3. **Select implementation mode:**
    - **Flutter-widgets-only** — static/turn-based boards, coloring, memory, matching, drag-and-drop,
      tap-reaction. `CustomPainter`/`Canvas`, `AnimatedBuilder`, gestures. Simplest, most testable.
@@ -66,7 +68,13 @@ Run these in order. Skip a step only with a stated reason.
 9. **Handoff.** Report: what you built, chosen mode and why, **changed files**, **commands run with
    real output** (or why none ran), assumptions, open risks, next steps.
 
-## Game templates
+## Genre design templates — `templates/`
+Per-genre **design starting points** (a filled Mini-GDD + an architecture skeleton you copy at step 2),
+distinct from the implementation recipes below. Pick one, fill its brackets, build to its skeleton:
+`casual`, `coloring`, `card`, `puzzle`, `platformer-flame`, `endless-runner`, `quiz`,
+`educational-kids`, `ui-heavy`. Index + how-to in `templates/README.md`.
+
+## Game templates (implementation recipes)
 Pick the closest and adapt (full recipes in `references/game-templates.md`):
 - `coloring-shapes` — tap-to-fill vector regions. Flutter-widgets-only (`CustomPainter`).
 - `simple-platformer` — run/jump on platforms, simple physics. Flame (hybrid shell).
