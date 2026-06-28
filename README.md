@@ -53,7 +53,8 @@
 ├─ .cursor/skills/…  .cursor/rules/agents/   ← зеркала для Cursor        (синхронизируются)
 ├─ .cursor/rules/                            ← Cursor .mdc-правила (общее / архитектура / тесты)
 ├─ docs/ai-game-dev/upstream-build-spec.md   ← полная исходная спецификация (21 раздел)
-├─ examples/memory_match/                    ← рабочая референс-игра: pure-Dart ядро + тесты + Flutter-UI
+├─ examples/memory_match/                    ← референс-игра (widgets): pure-Dart ядро + тесты + Flutter-UI
+├─ examples/endless_runner/                  ← референс-игра (Flame): pure-ядро + FlameGame + тесты
 ├─ .github/workflows/ci.yml                  ← CI: структурный gate + analyze/test примера
 ├─ AGENTS.md                                 ← точка входа для Codex / AGENTS.md-инструментов
 └─ CLAUDE.md                                 ← точка входа для Claude Code
@@ -261,8 +262,8 @@ flutter build ipa        # релизная сборка под iOS
 - [x] **`scripts/dart-doctor.py`** — health-check проекта по 8 измерениям (протестирован на синтетике).
 - [x] **Каталог ошибок** `common-pitfalls.md` + 4 скрипта безопасной автоматизации (preflight, safe-run,
       triage-log, pub-cache) с политикой `ci-and-automation.md`.
-- [x] **`examples/memory_match/`** — полная собираемая, протестированная референс-игра (чистое Dart-ядро
-      + Flutter-UI). **23 теста проходят** в CI.
+- [x] **2 референс-игры** — `examples/memory_match/` (widgets, 23 теста) + `examples/endless_runner/`
+      (Flame: dt-clamp, clearable-спавн, frame-rate independence, AABB-коллизии). Обе **проходят CI**.
 - [x] **Dart CI** — job `example` (`flutter analyze` + `flutter test` через `subosito/flutter-action`)
       рядом со структурным gate. Зелёный CI = доказательство, что код навыка компилируется и проходит тесты.
 - [x] **`LICENSE`** — MIT.

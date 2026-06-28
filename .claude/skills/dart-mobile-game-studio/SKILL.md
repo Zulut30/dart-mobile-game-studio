@@ -220,9 +220,11 @@ decision criteria, concrete commands, code snippets, and common pitfalls:
 - `add-in-app-purchases.md` — `in_app_purchase`: products in both stores, full purchase stream,
   mandatory restore, server-side verification (or documented gap), parental gate for kids.
 
-## Worked example
-- `examples/memory_match/` — a complete, buildable & tested reference game (Flutter-widgets-only
-  memory match). Pure-Dart core (`lib/models/`+`lib/systems/`, no Flutter import, unit-tested) under a
-  thin widget UI; immutable value types, a `(state, action) -> state` reducer, injected `SeededRandom`,
-  `Semantics`, kids-safe. CI's `example` job runs `flutter analyze` + `flutter test` on it. Copy its
-  architecture for new games.
+## Worked examples (both buildable, tested, CI-green)
+- `examples/memory_match/` — **widgets mode**: memory match. Pure-Dart core (`lib/models/`+`lib/systems/`,
+  no Flutter import, unit-tested) under a thin widget UI; immutable value types, a `(state, action) -> state`
+  reducer, injected `SeededRandom`, `Semantics`, kids-safe.
+- `examples/endless_runner/` — **Flame mode**: lite endless runner. Pure-Dart core (spawn/physics/
+  collision rules, no Flame/Flutter import) under a thin `FlameGame`; clamped `dt`, clearable seeded
+  spawns, frame-rate independence, AABB collision, no per-frame allocation, `ValueNotifier` HUD.
+- CI's `example` job runs `flutter analyze` + `flutter test` on **both** (matrix). Copy whichever mode fits.

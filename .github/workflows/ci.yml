@@ -30,9 +30,13 @@ jobs:
   example:
     name: Reference game (analyze + test)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # run both examples even if one fails, so we see both
+      matrix:
+        project: [memory_match, endless_runner]
     defaults:
       run:
-        working-directory: examples/memory_match
+        working-directory: examples/${{ matrix.project }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -44,7 +48,7 @@ jobs:
         run: flutter pub get
       - name: Analyze (pure core + UI)
         run: flutter analyze
-      - name: Test (pure-Dart core + widget smoke)
+      - name: Test (pure-Dart core + widget/smoke)
         run: flutter test
       # Note: `dart format --set-exit-if-changed .` is intentionally not gated yet — add it once
       # the formatter has run on a machine with the SDK so the check starts from a clean baseline.

@@ -1,0 +1,26 @@
+name: endless_runner
+description: >-
+  Reference endless-runner for the dart-mobile-game-studio skill — a pure-Dart
+  core (spawn/physics/collision rules, no Flame/Flutter import, tested with
+  dart/flutter test) under a thin Flame (FlameGame) renderer. The Flame-mode
+  counterpart to examples/memory_match (widgets mode).
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  # No bundled assets: placeholder rectangles (no copyrighted material).
