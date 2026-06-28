@@ -243,7 +243,7 @@ extension DurationClock on Duration {
   }
 }
 
-grid.at(idx)?.let(...);        // null instead of RangeError
+final cell = grid.at(idx);     // null instead of a RangeError (Dart has no Kotlin-style .let)
 0.0.lerpTo(1.0, progress);     // reads as a phrase
 elapsed.clock;                 // HUD string, pure-Dart-testable
 ```

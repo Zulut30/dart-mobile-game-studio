@@ -226,7 +226,10 @@ void initState() {
   super.initState();
   _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
   // Read disableAnimations from the binding in initState (no MediaQuery context yet).
-  if (!WidgetsBinding.instance.disableAnimations) _c.repeat(reverse: true);
+  if (!WidgetsBinding.instance.platformDispatcher.accessibilityFeatures
+      .disableAnimations) {
+    _c.repeat(reverse: true);
+  }
 }
 ```
 
@@ -253,7 +256,8 @@ class _StaggeredStarsState extends State<StaggeredStars> with SingleTickerProvid
     super.initState();
     _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     // Reduce Motion: jump straight to the final frame instead of playing the sequence.
-    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+    // initState has no MediaQuery yet — read from the binding, not context.
+    if (WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations) {
       _c.value = 1.0;
     } else {
       _c.forward();

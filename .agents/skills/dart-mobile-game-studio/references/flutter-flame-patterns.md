@@ -75,8 +75,10 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 
 class MyGame extends FlameGame {
-  MyGame() : super();
-  final model = GameModel(rng: Random.secure());
+  // Inject a seeded Random so spawns/shuffles are reproducible and testable
+  // (the doctrine: never Random.secure()/bare Random() in game logic).
+  MyGame({Random? rng}) : model = GameModel(rng: rng ?? Random(7));
+  final GameModel model;
 
   @override
   void update(double dt) {
@@ -178,7 +180,8 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 ```
 
 - Callbacks: `onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other)`,
-  `onCollision(...)` (every frame of contact), `onCollisionEnd(PositionComponent other)`.
+  `onCollision(Set<Vector2> intersectionPoints, PositionComponent other)` (every frame of contact),
+  `onCollisionEnd(PositionComponent other)`.
 - Hitbox shapes: `RectangleHitbox`, `CircleHitbox`, `PolygonHitbox` (convex only). Prefer the
   cheap circle/rectangle over polygons for perf.
 - `CollisionType` on a hitbox tunes cost: `active` (collides with active + passive — the default),

@@ -219,7 +219,10 @@ class _HintPulseState extends State<HintPulse> with SingleTickerProviderStateMix
     _scale = Tween(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _c, curve: Curves.easeInOut),
     );
-    if (!WidgetsBinding.instance.disableAnimations) _c.repeat(reverse: true);
+    if (!WidgetsBinding.instance.platformDispatcher.accessibilityFeatures
+        .disableAnimations) {
+      _c.repeat(reverse: true);
+    }
   }
 
   @override
@@ -238,8 +241,9 @@ class _HintPulseState extends State<HintPulse> with SingleTickerProviderStateMix
 }
 ```
 
-> Read `disableAnimations` from `WidgetsBinding.instance` in `initState` (no `context` MediaQuery yet),
-> or from `MediaQuery` in `build`/`didChangeDependencies`. Either way, **gate before you animate.**
+> Read `disableAnimations` from `WidgetsBinding.instance.platformDispatcher.accessibilityFeatures` in
+> `initState` (no `context` MediaQuery yet), or from `MediaQuery.of(context)` in
+> `build`/`didChangeDependencies`. Either way, **gate before you animate.**
 
 ## `CustomPainter` — vector art and the Flutter-widgets-only game surface
 

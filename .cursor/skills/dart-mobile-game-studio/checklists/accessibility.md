@@ -43,8 +43,8 @@ h.dispose();
 - [ ] Animated/painted text reads `textScaler` too (a `TextPainter` in a `CustomPainter` is sized off the scaler, not a hard-coded `fontSize`).
 
 ## Reduce Motion (Remove animations)
-- [ ] `MediaQuery.disableAnimations` (build) / `WidgetsBinding.instance.disableAnimations` (`initState`) is read **before** any animation and durations collapse to `Duration.zero` so motion snaps instead of playing.
-- [ ] Looping/auto-reversing controllers are gated: `if (!WidgetsBinding.instance.disableAnimations) _c.repeat(...)` — no free-running tween when the user asked the OS to stop motion.
+- [ ] `MediaQuery.of(context).disableAnimations` (build) / `WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations` (`initState`) is read **before** any animation and durations collapse to `Duration.zero` so motion snaps instead of playing.
+- [ ] Looping/auto-reversing controllers are gated: `if (!WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations) _c.repeat(...)` — no free-running tween when the user asked the OS to stop motion.
 - [ ] The setting is never overridden "for polish"; reduced-motion is the user's choice, and the snapped path still leaves the game fully playable (state changes still land, just without the transition).
 - [ ] Parallax/screen-shake/confetti and other vestibular-trigger effects are disabled (not merely shortened) under Reduce Motion.
 

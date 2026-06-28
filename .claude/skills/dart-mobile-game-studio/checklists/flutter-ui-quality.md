@@ -68,7 +68,7 @@ device** where a box says "no jank" — debug-mode numbers don't count.
 - [ ] Async callbacks that touch widget state are guarded with `if (!mounted) return;` so a late `Future`/stream event after dispose can't `setState`.
 
 ## No jank in transitions & motion
-- [ ] Reduce Motion is honored: `MediaQuery.disableAnimations` / `WidgetsBinding.instance.disableAnimations` is read and durations collapse to `Duration.zero` (motion snaps, never overrides the OS choice).
+- [ ] Reduce Motion is honored: `MediaQuery.of(context).disableAnimations` / `WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations` is read and durations collapse to `Duration.zero` (motion snaps, never overrides the OS choice).
 - [ ] No red bars on the UI **or** raster graph during screen transitions, route pushes, overlay add/remove, and list scroll in normal play (performance overlay / DevTools, profile mode, oldest device).
 - [ ] No `saveLayer` triggers in animated/hot paths: avoid the `Opacity` widget (use `AnimatedOpacity`/`Image.opacity`/a semitransparent color), avoid `ClipRRect`/`ClipPath`/`ShaderMask`/`BackdropFilter`/`ColorFilter` mid-animation (prefer `borderRadius` on a decoration).
 - [ ] On-screen lists/grids are lazy (`ListView.builder`/`GridView.builder`), never a literal `children:` of off-screen cells.

@@ -183,17 +183,27 @@ import '../assets/seeded_random.dart'; // SeededRandom wrapping dart:math Random
 
 enum Phase { ready, oneUp, resolving } // resolving = brief lock during mismatch
 
+// Named MemoryCard, NOT `Card` — `Card` is a Material widget; shadowing it bites
+// the moment a widget file references the model type.
+class MemoryCard {
+  MemoryCard(this.index, this.symbol);
+  final int index;
+  final int symbol;
+  bool isFaceUp = false;
+  bool isMatched = false;
+}
+
 class MemoryGame {
   MemoryGame(List<int> symbols, {required int seed})
       : cards = _deal(symbols, seed);
-  final List<Card> cards;
+  final List<MemoryCard> cards;
   Phase phase = Phase.ready;
   int? _firstIndex;
   int moves = 0;
 
-  static List<Card> _deal(List<int> symbols, int seed) {
+  static List<MemoryCard> _deal(List<int> symbols, int seed) {
     final deck = [...symbols, ...symbols] // each symbol twice
-        .asMap().entries.map((e) => Card(e.key, e.value)).toList();
+        .asMap().entries.map((e) => MemoryCard(e.key, e.value)).toList();
     SeededRandom(seed).shuffle(deck); // Fisher–Yates with seeded Random
     return deck;
   }
