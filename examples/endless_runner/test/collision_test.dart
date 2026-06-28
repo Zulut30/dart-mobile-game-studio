@@ -18,11 +18,11 @@ void main() {
     });
 
     test('an obstacle far to the right does not hit', () {
-      expect(Collision.hits(const Runner(), Obstacle(id: 0, x: 1000, height: 50), c), isFalse);
+      expect(Collision.hits(const Runner(), const Obstacle(id: 0, x: 1000, height: 50), c), isFalse);
     });
 
     test('an obstacle already passed (to the left) does not hit', () {
-      expect(Collision.hits(const Runner(), Obstacle(id: 0, x: -200, height: 50), c), isFalse);
+      expect(Collision.hits(const Runner(), const Obstacle(id: 0, x: -200, height: 50), c), isFalse);
     });
   });
 }
