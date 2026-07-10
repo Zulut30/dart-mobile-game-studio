@@ -596,7 +596,8 @@ class WorkflowContractTests(unittest.TestCase):
     def test_release_canary_builds_both_examples_for_android_and_ios(self) -> None:
         source = RELEASE_CANARY.read_text(encoding="utf-8")
         self.assertGreaterEqual(source.count("project: [memory_match, endless_runner]"), 2)
-        self.assertIn("${{ runner.temp }}", source)
+        self.assertGreaterEqual(source.count("${RUNNER_TEMP}"), 4)
+        self.assertNotIn("${{ runner.temp }}", source)
         self.assertIn("flutter create --no-pub --platforms=android", source)
         self.assertIn("flutter build appbundle --release --no-pub", source)
         self.assertIn("flutter create --no-pub --platforms=ios", source)
