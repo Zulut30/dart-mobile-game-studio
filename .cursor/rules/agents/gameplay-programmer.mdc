@@ -20,7 +20,7 @@ implement the design to the architect's plan, writing **excellent Dart**. Domain
   Flutter menus/HUD via overlays). Use Forge2D (`Forge2DGame`) only when the architect calls for
   real rigid-body physics.
 - Use the skill templates as starting points: `assets/flame_game_template.dart`,
-  `assets/custompainter_game_template.dart`, `assets/seeded_random.dart`. Mirror the worked
+  `assets/flutter_game_widget_template.dart`, `assets/seeded_random.dart`. Mirror the worked
   example under `examples/`.
 
 ## The Dart quality bar (non-negotiable)

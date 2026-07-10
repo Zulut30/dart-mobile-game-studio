@@ -4,7 +4,7 @@
 
 ## When to use
 - The chosen mode is **Flame** or **hybrid GameWidget** (motion, per-frame `update(dt)`, sprites, physics, particles, many moving entities). See `references/flutter-game-architecture` for the mode decision.
-- **Do NOT use** for static/turn-based or form-like games (coloring, tap-grid memory, simple sliding puzzle with no animation) — those are Flutter-widgets mode; use `workflows/setup-flutter-widget-game.md` instead.
+- **Do NOT use** for static/turn-based or form-like games (coloring, tap-grid memory, simple sliding puzzle with no animation) — those are Flutter-widgets mode; use `workflows/setup-flutter-project.md` instead.
 
 ## Prerequisites
 - A Flutter app scaffold already exists (`flutter create` done, app runs). If not, do that first.
@@ -108,7 +108,7 @@ class MyGame extends FlameGame<GameWorld> {
   }
 }
 ```
-> API note (grounded): `FlameGame` accepts `world:` and `camera:` constructor params; `CameraComponent.withFixedResolution(width:, height:)` keeps a constant logical canvas and letterboxes on other aspect ratios — the single best lever for iPhone/iPad/Android consistency (`references/flame-engine` camera docs). Choose a logical resolution your model reasons in; render scales to fit.
+> API note (grounded): `FlameGame` accepts `world:` and `camera:` constructor params; `CameraComponent.withFixedResolution(width:, height:)` keeps a constant logical canvas and letterboxes on other aspect ratios — the single best lever for iPhone/iPad/Android consistency (see `references/flutter-flame-patterns.md`). Choose a logical resolution your model reasons in; render scales to fit.
 
 ### 5. Host the game in a `Scaffold` with `GameWidget` + overlays
 Overlays are **Flutter widgets drawn on top of the canvas**, toggled at runtime via `game.overlays`. Use them for menu, HUD, and pause — never paint UI chrome with Flame components. Builder signature is `(BuildContext context, T game) => Widget`.

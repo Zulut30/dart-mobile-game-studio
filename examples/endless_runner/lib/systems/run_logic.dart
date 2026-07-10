@@ -14,6 +14,15 @@ import 'spawner.dart';
 /// the same (state, dt, Random) the result is identical, so `dart test` verifies
 /// the simulation on the VM. The Flame layer calls these and renders the result.
 abstract final class RunLogic {
+  /// Creates the non-running menu state without consuming randomness.
+  static RunState menu(RunConfig config) => RunState(
+        phase: GamePhase.menu,
+        config: config,
+        runner: const Runner(),
+        obstacles: const [],
+        speed: config.baseSpeed,
+      );
+
   /// Deals a fresh run in the `playing` phase from an injected [Random].
   static RunState start(RunConfig config, Random rng) => RunState(
         phase: GamePhase.playing,
@@ -30,6 +39,7 @@ abstract final class RunLogic {
   static RunState advance(RunState s, double rawDt, Random rng) {
     if (s.phase != GamePhase.playing) return s;
     final dt = Physics.clampDt(rawDt);
+    if (dt == 0) return s;
     final c = s.config;
 
     final speed = math.min(c.maxSpeed, s.speed + c.rampPerSecond * dt);
@@ -67,6 +77,19 @@ abstract final class RunLogic {
   /// (no double-jumps). The view calls this on tap.
   static RunState jump(RunState s) {
     if (s.phase != GamePhase.playing || !s.runner.grounded) return s;
-    return s.copyWith(runner: s.runner.copyWith(vy: s.config.jumpVelocity, grounded: false));
+    return s.copyWith(
+      runner: s.runner.copyWith(vy: s.config.jumpVelocity, grounded: false),
+    );
   }
+
+  /// Pauses an active run; a no-op in every other phase.
+  static RunState pause(RunState s) =>
+      s.phase == GamePhase.playing ? s.copyWith(phase: GamePhase.paused) : s;
+
+  /// Resumes a paused run; a no-op in every other phase.
+  static RunState resume(RunState s) =>
+      s.phase == GamePhase.paused ? s.copyWith(phase: GamePhase.playing) : s;
+
+  /// Clears the run and returns to the menu boundary.
+  static RunState quitToMenu(RunState s) => menu(s.config);
 }

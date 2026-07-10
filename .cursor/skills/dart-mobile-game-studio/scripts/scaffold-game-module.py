@@ -26,6 +26,18 @@ SUPPORTED_TYPES = [
 # Types that need continuous motion/physics -> Flame (hybrid). Others -> Flutter-widgets-only.
 FLAME_TYPES = {"simple-platformer", "endless-runner-lite"}
 
+# Dart language keywords and reserved built-in identifiers are invalid package names.
+DART_RESERVED_WORDS = {
+    "abstract", "as", "assert", "async", "await", "base", "break", "case", "catch",
+    "class", "const", "continue", "covariant", "default", "deferred", "do", "dynamic",
+    "else", "enum", "export", "extends", "extension", "external", "factory", "false",
+    "final", "finally", "for", "function", "get", "hide", "if", "implements", "import",
+    "in", "interface", "is", "late", "library", "mixin", "new", "null", "of", "on",
+    "operator", "part", "required", "rethrow", "return", "sealed", "set", "show",
+    "static", "super", "switch", "sync", "this", "throw", "true", "try", "type",
+    "typedef", "var", "void", "when", "while", "with", "yield",
+}
+
 
 def to_snake(name: str) -> str:
     s = re.sub(r"[^A-Za-z0-9]+", "_", name)
@@ -61,25 +73,65 @@ def model_stub(snake: str, pascal: str, gtype: str) -> str:
 ///
 /// This is the single source of truth: the UI/Flame layer renders it and forwards input.
 /// Advance time-based systems with a clamped [dt]; inject a seeded Random for determinism.
-library;
-
 enum {pascal}State {{ menu, playing, paused, won, lost }}
 
 /// The game model. Keep all rules here so they are unit-testable with `dart test`.
 class {pascal}Game {{
-  {pascal}State state = {pascal}State.menu;
-  int score = 0;
+  {pascal}State _state = {pascal}State.menu;
+  {pascal}State get state => _state;
+
+  int _score = 0;
+  int get score => _score;
 
   /// Begin a fresh run.
   void start() {{
-    score = 0;
-    state = {pascal}State.playing;
+    if (_state != {pascal}State.menu &&
+        _state != {pascal}State.won &&
+        _state != {pascal}State.lost) {{
+      return;
+    }}
+    _score = 0;
+    _state = {pascal}State.playing;
+  }}
+
+  void pause() {{
+    if (_state == {pascal}State.playing) {{
+      _state = {pascal}State.paused;
+    }}
+  }}
+
+  void resume() {{
+    if (_state == {pascal}State.paused) {{
+      _state = {pascal}State.playing;
+    }}
+  }}
+
+  void win() {{
+    if (_state == {pascal}State.playing) {{
+      _state = {pascal}State.won;
+    }}
+  }}
+
+  void lose() {{
+    if (_state == {pascal}State.playing) {{
+      _state = {pascal}State.lost;
+    }}
+  }}
+
+  void quitToMenu() => _state = {pascal}State.menu;
+
+  /// Placeholder scoring boundary. Replace with genre-specific score rules.
+  void addScore(int points) {{
+    if (_state != {pascal}State.playing || points <= 0) return;
+    _score += points;
   }}
 
   /// Advance the simulation by [dt] seconds. Frame-rate independent; the renderer passes an
   /// already-clamped [dt] (Flame does NOT clamp it for you).
   void advance(double dt) {{
-    if (state != {pascal}State.playing) return;
+    if (_state != {pascal}State.playing || !dt.isFinite || dt <= 0) {{
+      return;
+    }}
     // TODO: advance spawners/timers/difficulty for {gtype} here.
   }}
 
@@ -89,8 +141,10 @@ class {pascal}Game {{
 
 
 def lib_export(snake: str) -> str:
-    return f"/// {snake} — pure-Dart game core. Import this from your Flutter/Flame app.\n" \
-           f"library {snake};\n\nexport 'src/{snake}_game.dart';\n"
+    return (
+        f"// {snake} — pure-Dart game core. Import this from your Flutter/Flame app.\n\n"
+        f"export 'src/{snake}_game.dart';\n"
+    )
 
 
 def test_stub(snake: str, pascal: str) -> str:
@@ -98,16 +152,56 @@ def test_stub(snake: str, pascal: str) -> str:
 import 'package:{snake}/{snake}.dart';
 
 void main() {{
-  test('starts in playing with zero score', () {{
-    final game = {pascal}Game()..start();
+  test('starts at the menu and begins a fresh run', () {{
+    final game = {pascal}Game();
+    expect(game.state, {pascal}State.menu);
+
+    game
+      ..start()
+      ..addScore(3);
     expect(game.state, {pascal}State.playing);
+    expect(game.score, 3);
+  }});
+
+  test('supports pause, resume, and quit transitions', () {{
+    final game = {pascal}Game()
+      ..start()
+      ..pause();
+    expect(game.state, {pascal}State.paused);
+
+    game.resume();
+    expect(game.state, {pascal}State.playing);
+
+    game.quitToMenu();
+    expect(game.state, {pascal}State.menu);
+  }});
+
+  test('ignores illegal transitions and scoring outside play', () {{
+    final game = {pascal}Game();
+    game
+      ..pause()
+      ..resume()
+      ..win()
+      ..lose()
+      ..addScore(10)
+      ..advance(double.nan);
+    expect(game.state, {pascal}State.menu);
     expect(game.score, 0);
   }});
 
-  test('advance does nothing unless playing', () {{
-    final game = {pascal}Game();
-    game.advance(0.016);
-    expect(game.state, {pascal}State.menu);
+  test('terminal states can restart and reset score', () {{
+    final game = {pascal}Game()
+      ..start()
+      ..addScore(5)
+      ..lose();
+    expect(game.state, {pascal}State.lost);
+
+    game.start();
+    expect(game.state, {pascal}State.playing);
+    expect(game.score, 0);
+
+    game.win();
+    expect(game.state, {pascal}State.won);
   }});
 }}
 """
@@ -142,9 +236,12 @@ dependencies:
   {snake}:
     path: ../{snake}
 ```
-Then build the UI from the skill's `assets/flutter_game_widget_template.dart` (widgets-only) or
-`assets/flame_game_template.dart` (Flame/hybrid), keeping the widgets/components thin over
-`{pascal}Game`. The UI imports `package:{snake}/{snake}.dart`; the core never imports Flutter.
+Then adapt the renderer from the skill's paired templates:
+- widgets-only: `assets/tile_game_model_template.dart` + `assets/flutter_game_widget_template.dart`;
+- Flame/hybrid: `assets/flame_game_model_template.dart` + `assets/flame_game_template.dart`.
+
+Replace the template model import with `package:{snake}/{snake}.dart` and keep widgets/components
+thin over `{pascal}Game`. The core never imports Flutter or Flame.
 
 ## Next steps
 1. Flesh out `{pascal}Game` with the {gtype} rules (and split systems into `lib/systems/`).
@@ -188,21 +285,43 @@ def main(argv: list[str]) -> int:
 
     snake = to_snake(args.name)
     pascal = to_pascal(args.name)
-    if not snake:
-        print(f"error: --name '{args.name}' has no usable identifier characters.", file=sys.stderr)
+    if not re.fullmatch(r"[a-z][a-z0-9_]*", snake) or snake in DART_RESERVED_WORDS:
+        print(
+            f"error: --name '{args.name}' does not produce a valid non-reserved Dart package "
+            "identifier (lowercase, starts with a letter).",
+            file=sys.stderr,
+        )
+        return 2
+    if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", pascal):
+        print(f"error: --name '{args.name}' does not produce a valid Dart type name.", file=sys.stderr)
         return 2
     gtype = args.gtype
     mode = "Flame (hybrid)" if gtype in FLAME_TYPES else "Flutter-widgets-only"
     root = Path(args.dest).expanduser().resolve() / snake
 
+    if root.exists() and not root.is_dir():
+        print(f"error: scaffold target exists and is not a directory: {root}", file=sys.stderr)
+        return 2
+
     created: list[str] = []
     skipped: list[str] = []
-    create_file(root / "pubspec.yaml", pubspec(snake, gtype), created, skipped)
-    create_file(root / "analysis_options.yaml", analysis_options(), created, skipped)
-    create_file(root / "lib" / f"{snake}.dart", lib_export(snake), created, skipped)
-    create_file(root / "lib" / "src" / f"{snake}_game.dart", model_stub(snake, pascal, gtype), created, skipped)
-    create_file(root / "test" / f"{snake}_test.dart", test_stub(snake, pascal), created, skipped)
-    create_file(root / "README.md", readme(snake, pascal, gtype, mode), created, skipped)
+    try:
+        create_file(root / "pubspec.yaml", pubspec(snake, gtype), created, skipped)
+        create_file(root / "analysis_options.yaml", analysis_options(), created, skipped)
+        create_file(root / "lib" / f"{snake}.dart", lib_export(snake), created, skipped)
+        create_file(
+            root / "lib" / "src" / f"{snake}_game.dart",
+            model_stub(snake, pascal, gtype),
+            created,
+            skipped,
+        )
+        create_file(root / "test" / f"{snake}_test.dart", test_stub(snake, pascal), created, skipped)
+        create_file(root / "README.md", readme(snake, pascal, gtype, mode), created, skipped)
+    except OSError as error:
+        print(f"error: could not create scaffold: {error}", file=sys.stderr)
+        if created:
+            print("Partial output was left in place; existing files were not overwritten.", file=sys.stderr)
+        return 2
 
     print(f"Scaffolded '{pascal}Game' (package {snake}, {gtype}, {mode}) at: {root}")
     if created:

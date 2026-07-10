@@ -1,8 +1,11 @@
 name: CI
 
-# Two gates:
+# Five gates:
 #   1. structure — frontmatter/sync/JSON/script-syntax of the skill package (pure python/bash).
-#   2. example   — analyze + test the reference game (examples/memory_match) on a real Flutter SDK,
+#   2. cli-contracts — black-box safety/exit-code/schema/routing tests on Linux and macOS.
+#   3. ai-routing — RU/EN task routing accuracy + full workflow/agent coverage.
+#   4. generated-contracts — format/compile/test Dart, widgets, Flame templates, and scaffold output.
+#   5. example   — format/analyze/test both reference games on a real Flutter SDK,
 #                  which is the end-to-end proof the skill's doctrine produces working code.
 
 on:
@@ -14,6 +17,9 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   structure:
@@ -27,8 +33,71 @@ jobs:
       - name: Structural quality gate
         run: .agents/skills/dart-mobile-game-studio/scripts/validate-skill.sh
 
+  cli-contracts:
+    name: Critical CLI contracts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run black-box CLI tests
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/cli -p 'test_*.py' -v
+
+  ai-routing:
+    name: AI routing eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce routing quality threshold
+        run: .agents/skills/dart-mobile-game-studio/scripts/router-eval.py
+
+  generated-contracts:
+    name: Generated contract (${{ matrix.fixture }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: [pure_models, widgets, flame, scaffold_contract]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Materialize canonical template pairs
+        run: >-
+          python3 .agents/skills/dart-mobile-game-studio/scripts/materialize-template-fixtures.py
+          --dest "${RUNNER_TEMP}/generated-contracts"
+      - name: Generate scaffold contract
+        if: matrix.fixture == 'scaffold_contract'
+        run: >-
+          python3 .agents/skills/dart-mobile-game-studio/scripts/scaffold-game-module.py
+          --name ScaffoldContract --type simple-platformer
+          --dest "${RUNNER_TEMP}/generated-contracts"
+      - name: Resolve, format, analyze, and test generated code
+        run: |
+          cd "${RUNNER_TEMP}/generated-contracts/${{ matrix.fixture }}"
+          case "${{ matrix.fixture }}" in
+            pure_models|scaffold_contract)
+              dart pub get
+              dart format --output=none --set-exit-if-changed .
+              dart analyze --fatal-infos
+              dart test
+              ;;
+            *)
+              flutter pub get
+              dart format --output=none --set-exit-if-changed .
+              flutter analyze --fatal-infos
+              flutter test
+              ;;
+          esac
+
   example:
-    name: Reference game (analyze + test)
+    name: Reference game (format + analyze + test)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # run both examples even if one fails, so we see both
@@ -46,9 +115,16 @@ jobs:
         run: flutter --version
       - name: Install dependencies
         run: flutter pub get
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
       - name: Analyze (pure core + UI)
         run: flutter analyze
+      - name: Test pure-Dart core on the VM
+        run: |
+          if [[ "${{ matrix.project }}" == "memory_match" ]]; then
+            dart test test/board_factory_test.dart test/game_logic_test.dart test/game_state_test.dart
+          else
+            dart test test/collision_test.dart test/physics_test.dart test/run_logic_test.dart test/spawner_test.dart
+          fi
       - name: Test (pure-Dart core + widget/smoke)
         run: flutter test
-      # Note: `dart format --set-exit-if-changed .` is intentionally not gated yet — add it once
-      # the formatter has run on a machine with the SDK so the check starts from a clean baseline.

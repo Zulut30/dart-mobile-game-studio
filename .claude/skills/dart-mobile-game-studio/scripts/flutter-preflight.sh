@@ -30,6 +30,7 @@ ROOT="${ROOT:-$(pwd)}"
 REQUIRE=""
 WANT_JSON="no"
 REQUIRE_GIT_CLEAN="no"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -48,7 +49,7 @@ REQUIRE="$(printf '%s' "${REQUIRE}" | tr ',' ' ')"
 # ---- collected state (filled by the checks below) ----
 DART_V="" ; FLUTTER_V="" ; ANDROID_V="" ; XCODE_V="" ; POD_V=""
 GIT_REPO="no" ; GIT_BRANCH="" ; GIT_DIRTY="" ; GIT_DETACHED="no"
-PUBSPEC="" ; IS_FLUTTER="no"
+PUBSPEC="" ; IS_FLUTTER="no" ; PROJECT_COUNT=0 ; PROJECT_LIST=""
 FAIL_REASONS=""
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -80,7 +81,12 @@ if git -C "${ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 # ---- project ----
-PUBSPEC="$(find "${ROOT}" -maxdepth 3 -name pubspec.yaml -not -path '*/.*' 2>/dev/null | head -n 1 || true)"
+while IFS= read -r p; do
+  [[ -n "${p}" ]] || continue
+  PROJECT_COUNT=$((PROJECT_COUNT + 1))
+  PROJECT_LIST="${PROJECT_LIST}${PROJECT_LIST:+|}${p}"
+  [[ -z "${PUBSPEC}" ]] && PUBSPEC="${p}"
+done < <("${SCRIPT_DIR}/discover-projects.sh" --root "${ROOT}" --all)
 if [[ -n "${PUBSPEC}" ]]; then
   grep -qE '^\s*flutter\s*:' "${PUBSPEC}" 2>/dev/null && IS_FLUTTER="yes"
 fi
@@ -120,6 +126,16 @@ if [[ "${WANT_JSON}" == "yes" ]]; then
   printf '  "git_detached": "%s",\n' "${GIT_DETACHED}"
   printf '  "git_dirty_count": %s,\n' "${GIT_DIRTY:-0}"
   printf '  "pubspec": "%s",\n'     "$(esc "${PUBSPEC}")"
+  printf '  "project_count": %s,\n'  "${PROJECT_COUNT}"
+  printf '  "project_pubspecs": ['
+  first="yes"
+  IFS='|' read -ra _PROJECTS <<< "${PROJECT_LIST}"
+  for p in "${_PROJECTS[@]}"; do
+    [[ -n "${p}" ]] || continue
+    if [[ "${first}" == "yes" ]]; then first="no"; else printf ','; fi
+    printf '"%s"' "$(esc "${p}")"
+  done
+  printf '],\n'
   printf '  "is_flutter": "%s",\n'  "${IS_FLUTTER}"
   printf '  "ok": %s,\n'            "$([[ -z "${FAIL_REASONS}" ]] && echo true || echo false)"
   printf '  "fail_reasons": "%s"\n' "$(esc "${FAIL_REASONS}")"
@@ -149,6 +165,11 @@ else
   echo "== Project =="
   if [[ -n "${PUBSPEC}" ]]; then
     printf '  found: %s  (flutter project: %s)\n' "${PUBSPEC}" "${IS_FLUTTER}"
+    if [[ "${PROJECT_COUNT}" -gt 1 ]]; then
+      printf '  project count: %s (use ROOT=<project> for a single target)\n' "${PROJECT_COUNT}"
+      IFS='|' read -ra _PROJECTS <<< "${PROJECT_LIST}"
+      for p in "${_PROJECTS[@]}"; do [[ -n "${p}" ]] && printf '    - %s\n' "${p}"; done
+    fi
   else
     echo "  no pubspec.yaml under ${ROOT} — scaffold with: flutter create <app>  (or: dart create <pkg>)"
   fi

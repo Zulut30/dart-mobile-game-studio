@@ -9,7 +9,10 @@ abstract final class Physics {
   static const double maxStep = 1 / 30;
 
   /// Clamp a raw frame delta to a safe step.
-  static double clampDt(double dt) => dt.clamp(0.0, maxStep);
+  static double clampDt(double dt) {
+    if (!dt.isFinite || dt <= 0) return 0;
+    return dt >= maxStep ? maxStep : dt;
+  }
 
   /// Semi-implicit Euler step: gravity pulls `vy` down, `y` integrates `vy`, and
   /// landing snaps to the ground. Frame-rate independent (everything scales by `dt`).

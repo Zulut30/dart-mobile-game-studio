@@ -38,7 +38,8 @@
 #     -- dart run build_runner build --delete-conflicting-outputs
 #   scripts/safe-run.sh --stash --triage -- flutter clean
 #
-# Exit: the command's exit code (0 on success). 2 = usage; 3 = unsafe/dirty refusal.
+# Exit: the command's exit code (0 on success). 2 = usage; 3 = unsafe refusal;
+# 4 = requested commit failed; 5 = stashed user changes could not be restored cleanly.
 #
 set -uo pipefail
 
@@ -71,20 +72,25 @@ if [[ ${#CMD[@]} -eq 0 ]]; then echo "safe-run: no command given after '--'" >&2
 [[ -z "${LABEL}" ]] && LABEL="${CMD[*]}"
 [[ -z "${COMMIT_MSG}" ]] && COMMIT_MSG="chore(auto): ${LABEL} via skill"
 
+if [[ "${MODE}" == "allow-dirty" && "${DO_COMMIT}" == "yes" ]]; then
+  echo "safe-run: --allow-dirty cannot be combined with --commit." >&2
+  echo "  Commit/stash existing work first, or use --stash --commit." >&2
+  exit 3
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-LOG="$(mktemp -t safe-run.XXXXXX.log 2>/dev/null || echo "/tmp/safe-run.$$.log")"
 
 # ---- git context ----
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "safe-run: not a git repository — running WITHOUT a safety net (no rollback available)." >&2
-  echo "+ ${CMD[*]}"
-  "${CMD[@]}"; rc=$?
-  [[ $rc -ne 0 && "${DO_TRIAGE}" == "yes" ]] && true   # no log captured in this degraded path
-  exit $rc
+  echo "safe-run: not a git repository; refusing to run without a safety net." >&2
+  exit 3
 fi
 
-HAS_HEAD="yes"; git rev-parse HEAD >/dev/null 2>&1 || HAS_HEAD="no"
-START_SHA=""; [[ "${HAS_HEAD}" == "yes" ]] && START_SHA="$(git rev-parse HEAD)"
+if ! START_SHA="$(git rev-parse HEAD 2>/dev/null)"; then
+  echo "safe-run: repository has no commit yet; create an initial commit before using safe-run." >&2
+  exit 3
+fi
+
 DIRTY_COUNT="$(git status --porcelain | wc -l | tr -d ' ')"
 STASHED="no"
 SAFE_ROLLBACK="no"   # only true when we can prove rollback loses nothing
@@ -120,23 +126,50 @@ esac
 restore_stash() {
   if [[ "${STASHED}" == "yes" ]]; then
     echo "+ git stash pop  (restoring your pre-run changes)"
+    STASHED="no" # Never retry automatically after a conflict.
     if ! git stash pop >/dev/null 2>&1; then
       echo "safe-run: 'git stash pop' hit a conflict — your changes are safe in 'git stash list'." >&2
+      return 1
     fi
   fi
+  return 0
 }
 
 rollback() {
-  if [[ "${SAFE_ROLLBACK}" == "yes" && "${HAS_HEAD}" == "yes" ]]; then
+  if [[ "${SAFE_ROLLBACK}" == "yes" ]]; then
     echo "+ git reset --hard ${START_SHA}   &&   git clean -fd   (undo the broken/partial state)"
-    git reset --hard "${START_SHA}" >/dev/null 2>&1
-    git clean -fd >/dev/null 2>&1
+    if ! git reset --hard "${START_SHA}" >/dev/null 2>&1 || ! git clean -fd >/dev/null 2>&1; then
+      echo "safe-run: rollback failed; inspect the working tree manually." >&2
+      return 1
+    fi
     echo "safe-run: rolled the working tree back to ${START_SHA:0:9}."
-    restore_stash
+    restore_stash || return 1
   else
-    echo "safe-run: NOT auto-rolling back (unsafe mode or no commit yet) — inspect the tree manually." >&2
+    echo "safe-run: NOT auto-rolling back (unsafe mode) — inspect the tree manually." >&2
   fi
+  return 0
 }
+
+LOG="$(mktemp -t safe-run.XXXXXX.log 2>/dev/null || echo "/tmp/safe-run.$$.log")"
+FINISHED="no"
+
+cleanup_on_exit() {
+  local exit_code=$?
+  trap - EXIT INT TERM HUP
+  if [[ "${FINISHED}" != "yes" ]]; then
+    echo "safe-run: interrupted; restoring the pre-run state." >&2
+    if [[ "${DO_ROLLBACK}" == "yes" ]]; then
+      rollback || true
+    else
+      restore_stash || true
+    fi
+    echo "safe-run: full log kept at ${LOG}" >&2
+  fi
+  exit "${exit_code}"
+}
+
+trap cleanup_on_exit EXIT
+trap 'exit 130' INT TERM HUP
 
 # ---- run the command, tee to the log (capture rc of the command, not tee) ----
 echo "+ ${CMD[*]}"
@@ -147,22 +180,33 @@ rc=${PIPESTATUS[0]}
 echo
 if [[ $rc -eq 0 ]]; then
   echo "safe-run: command succeeded."
+  post_rc=0
   if [[ "${DO_COMMIT}" == "yes" ]]; then
     if [[ -n "$(git status --porcelain)" ]]; then
       echo "+ git add -A && git commit -m \"${COMMIT_MSG}\""
-      git add -A
-      if git commit -m "${COMMIT_MSG}" >/dev/null 2>&1; then
+      if ! git add -A; then
+        echo "safe-run: could not stage the generated changes." >&2
+        post_rc=4
+      elif git commit -m "${COMMIT_MSG}" >/dev/null 2>&1; then
         echo "safe-run: committed result as: ${COMMIT_MSG}"
       else
-        echo "safe-run: nothing committed (a pre-commit hook may have blocked it — check 'git status')." >&2
+        echo "safe-run: commit failed (a hook may have blocked it — check 'git status')." >&2
+        post_rc=4
       fi
     else
       echo "safe-run: no file changes to commit."
     fi
   fi
-  restore_stash    # bring back any stashed user edits on top of the (committed) result
-  rm -f "${LOG}"
-  exit 0
+  if ! restore_stash; then
+    post_rc=5
+  fi
+  FINISHED="yes"
+  if [[ "${post_rc}" -eq 0 ]]; then
+    rm -f "${LOG}"
+  else
+    echo "safe-run: full log kept at ${LOG}" >&2
+  fi
+  exit "${post_rc}"
 else
   echo "safe-run: command FAILED (exit ${rc})." >&2
   if [[ "${DO_TRIAGE}" == "yes" && -f "${SCRIPT_DIR}/triage-log.py" ]]; then
@@ -170,7 +214,13 @@ else
     python3 "${SCRIPT_DIR}/triage-log.py" "${LOG}" || true
     echo "--------------------"
   fi
-  [[ "${DO_ROLLBACK}" == "yes" ]] && rollback || { [[ "${DO_ROLLBACK}" == "no" ]] && restore_stash; }
+  post_rc="${rc}"
+  if [[ "${DO_ROLLBACK}" == "yes" ]]; then
+    rollback || post_rc=5
+  elif ! restore_stash; then
+    post_rc=5
+  fi
+  FINISHED="yes"
   echo "safe-run: full log kept at ${LOG}"
-  exit $rc
+  exit "${post_rc}"
 fi

@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_match/models/game_phase.dart';
 import 'package:memory_match/systems/board_factory.dart';
 import 'package:memory_match/systems/seeded_random.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('BoardFactory.newGame', () {
@@ -24,25 +24,34 @@ void main() {
       expect(counts.values.every((c) => c == 2), isTrue);
     });
 
-    test('ids are the slot indices (0 .. n-1), all face-down and unmatched', () {
-      final state = BoardFactory.newGame(pairs: 5, rng: SeededRandom(7));
-      for (var i = 0; i < state.cards.length; i++) {
-        expect(state.cards[i].id, i);
-        expect(state.cards[i].isFaceUp, isFalse);
-        expect(state.cards[i].isMatched, isFalse);
-      }
-    });
+    test(
+      'ids are the slot indices (0 .. n-1), all face-down and unmatched',
+      () {
+        final state = BoardFactory.newGame(pairs: 5, rng: SeededRandom(7));
+        for (var i = 0; i < state.cards.length; i++) {
+          expect(state.cards[i].id, i);
+          expect(state.cards[i].isFaceUp, isFalse);
+          expect(state.cards[i].isMatched, isFalse);
+        }
+      },
+    );
 
     test('is deterministic: same seed yields an identical layout', () {
       final a = BoardFactory.newGame(pairs: 6, rng: SeededRandom(42));
       final b = BoardFactory.newGame(pairs: 6, rng: SeededRandom(42));
       // value equality on GameState compares the whole card list
       expect(a, equals(b));
-      expect([for (final c in a.cards) c.faceId], [for (final c in b.cards) c.faceId]);
+      expect(
+        [for (final c in a.cards) c.faceId],
+        [for (final c in b.cards) c.faceId],
+      );
     });
 
     test('rejects fewer than one pair', () {
-      expect(() => BoardFactory.newGame(pairs: 0, rng: SeededRandom(1)), throwsArgumentError);
+      expect(
+        () => BoardFactory.newGame(pairs: 0, rng: SeededRandom(1)),
+        throwsArgumentError,
+      );
     });
   });
 }

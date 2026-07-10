@@ -49,7 +49,7 @@ You turn the Mini-GDD into a clean, testable, performant technical design. Domai
   stated, strong reason; never in a kids flow.
 
 ## How you work
-- Read `references/flutter-game-architecture.md`, `references/flame-patterns.md`, and
+- Read `references/flutter-game-architecture.md`, `references/flutter-flame-patterns.md`, and
   `references/dart/README.md` (the Dart quality bar) before deciding.
 - Verify any API you cite against the grounded references — never invent class/method names. The
   load-bearing ones: `FlameGame`, `Component` / `PositionComponent`, `onLoad` / `onMount` /

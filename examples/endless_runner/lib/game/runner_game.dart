@@ -33,18 +33,17 @@ class RunnerGame extends FlameGame {
   // Seeded at the UI edge (clock), not in the pure core — so the core stays
   // deterministic and testable. Re-seeded on restart.
   SeededRandom _rng = SeededRandom(1);
-  late RunState state = RunLogic.start(config, _rng);
+  late RunState state = RunLogic.menu(config);
 
   @override
   Future<void> onLoad() async {
-    _reseed();
+    await super.onLoad();
     await add(_Scene());
   }
 
   void _reseed() {
     _rng = SeededRandom(DateTime.now().millisecondsSinceEpoch & 0x7fffffff);
-    state = RunLogic.start(config, _rng);
-    score.value = 0;
+    _replaceState(RunLogic.start(config, _rng));
   }
 
   @override
@@ -53,28 +52,43 @@ class RunnerGame extends FlameGame {
     super.onRemove();
   }
 
-  /// Restart from the menu/game-over overlay.
+  /// Starts a fresh run from the menu or game-over overlay.
+  void start() => _reseed();
+
+  /// Restart from the game-over overlay.
   void restart() {
     _reseed();
-    onPhaseChange(state.phase);
   }
+
+  void pause() => _replaceState(RunLogic.pause(state));
+
+  void resume() => _replaceState(RunLogic.resume(state));
+
+  void quitToMenu() => _replaceState(RunLogic.quitToMenu(state));
 
   /// Tap handler (wired from the Flutter shell): jump.
   void onJumpTap() {
-    state = RunLogic.jump(state);
+    _replaceState(RunLogic.jump(state));
   }
 
   @override
   void update(double dt) {
-    super.update(dt);
-    if (state.phase != GamePhase.playing) return;
-    final previous = state.phase;
     // Clamp dt here in the loop (Flame does NOT) — RunLogic also clamps, so this
     // is idempotent; keeping it visible where the loop lives is the right habit.
-    final step = dt.clamp(0.0, Physics.maxStep);
-    state = RunLogic.advance(state, step, _rng);
-    score.value = state.score;
-    if (state.phase != previous) onPhaseChange(state.phase);
+    final step = Physics.clampDt(dt);
+    if (state.phase == GamePhase.playing) {
+      _replaceState(RunLogic.advance(state, step, _rng));
+    }
+    // Components observe the current model frame, never the previous one.
+    super.update(step);
+  }
+
+  void _replaceState(RunState next) {
+    if (next == state) return;
+    final previousPhase = state.phase;
+    state = next;
+    score.value = next.score;
+    if (next.phase != previousPhase) onPhaseChange(next.phase);
   }
 }
 

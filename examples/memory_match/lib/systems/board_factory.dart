@@ -19,9 +19,12 @@ abstract final class BoardFactory {
     final faces = <int>[
       for (var f = 0; f < pairs; f++) ...[f, f],
     ];
-    faces.shuffle(rng); // dart:core List.shuffle takes a Random — inject the seeded one
+    faces.shuffle(
+      rng,
+    ); // dart:core List.shuffle takes a Random — inject the seeded one
     final cards = <MemoryCard>[
-      for (var i = 0; i < faces.length; i++) MemoryCard(id: i, faceId: faces[i]),
+      for (var i = 0; i < faces.length; i++)
+        MemoryCard(id: i, faceId: faces[i]),
     ];
     return GameState(cards: cards, phase: GamePhase.playing);
   }

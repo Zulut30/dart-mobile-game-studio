@@ -39,9 +39,21 @@ abstract final class GameLogic {
 
     if (firstCard.faceId == card.faceId) {
       // Match: lock both face-up.
-      cards = _replace(cards, firstIndex, firstCard.copyWith(isMatched: true, isFaceUp: true));
-      cards = _replace(cards, index, card.copyWith(isMatched: true, isFaceUp: true));
-      final next = state.copyWith(cards: cards, moves: moves, clearFirstFlipped: true);
+      cards = _replace(
+        cards,
+        firstIndex,
+        firstCard.copyWith(isMatched: true, isFaceUp: true),
+      );
+      cards = _replace(
+        cards,
+        index,
+        card.copyWith(isMatched: true, isFaceUp: true),
+      );
+      final next = state.copyWith(
+        cards: cards,
+        moves: moves,
+        clearFirstFlipped: true,
+      );
       return next.isWon ? next.copyWith(phase: GamePhase.won) : next;
     }
 
@@ -67,14 +79,35 @@ abstract final class GameLogic {
     return state.copyWith(cards: cards, clearPendingMismatch: true);
   }
 
-  /// Toggles between `playing` and `paused`; a no-op in any other phase.
+  /// Pauses an active game; a no-op in every other phase.
+  static GameState pause(GameState state) => state.phase == GamePhase.playing
+      ? state.copyWith(phase: GamePhase.paused)
+      : state;
+
+  /// Resumes a paused game; a no-op in every other phase.
+  static GameState resume(GameState state) => state.phase == GamePhase.paused
+      ? state.copyWith(phase: GamePhase.playing)
+      : state;
+
+  /// Returns to the menu boundary and clears transient turn state.
+  static GameState quitToMenu(GameState state) => state.copyWith(
+        phase: GamePhase.menu,
+        clearFirstFlipped: true,
+        clearPendingMismatch: true,
+      );
+
+  /// Convenience toggle for UI controls. Prefer [pause]/[resume] at lifecycle boundaries.
   static GameState togglePause(GameState state) => switch (state.phase) {
-        GamePhase.playing => state.copyWith(phase: GamePhase.paused),
-        GamePhase.paused => state.copyWith(phase: GamePhase.playing),
+        GamePhase.playing => pause(state),
+        GamePhase.paused => resume(state),
         _ => state,
       };
 
-  static List<MemoryCard> _replace(List<MemoryCard> cards, int index, MemoryCard card) {
+  static List<MemoryCard> _replace(
+    List<MemoryCard> cards,
+    int index,
+    MemoryCard card,
+  ) {
     final next = List<MemoryCard>.of(cards);
     next[index] = card;
     return next;

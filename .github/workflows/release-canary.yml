@@ -1,0 +1,83 @@
+name: Release canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release-canary.yml"
+
+concurrency:
+  group: release-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android AAB (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [memory_match, endless_runner]
+    env:
+      PROJECT_DIR: ${{ runner.temp }}/${{ matrix.project }}_android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Create disposable Android runner
+        run: |
+          cp -R "examples/${{ matrix.project }}" "${PROJECT_DIR}"
+          cd "${PROJECT_DIR}"
+          flutter create --no-pub --platforms=android \
+            --project-name "${{ matrix.project }}" \
+            --org dev.dartmobilegamestudio .
+          flutter pub get
+      - name: Build release app bundle
+        run: |
+          cd "${PROJECT_DIR}"
+          flutter build appbundle --release --no-pub
+          bundle="$(find build/app/outputs/bundle/release -type f -name '*.aab' -size +0c -print -quit)"
+          test -n "${bundle}"
+          du -h "${bundle}"
+
+  ios:
+    name: iOS unsigned release (${{ matrix.project }})
+    runs-on: macos-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [memory_match, endless_runner]
+    env:
+      PROJECT_DIR: ${{ runner.temp }}/${{ matrix.project }}_ios
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Create disposable iOS runner
+        run: |
+          cp -R "examples/${{ matrix.project }}" "${PROJECT_DIR}"
+          cd "${PROJECT_DIR}"
+          flutter create --no-pub --platforms=ios \
+            --project-name "${{ matrix.project }}" \
+            --org dev.dartmobilegamestudio .
+          flutter pub get
+      - name: Build unsigned release app
+        run: |
+          cd "${PROJECT_DIR}"
+          flutter build ios --release --no-codesign --no-pub
+          app="$(find build/ios/iphoneos -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "${app}"
+          test -f "${app}/Runner"
+          du -sh "${app}"

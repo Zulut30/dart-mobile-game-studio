@@ -71,9 +71,12 @@ destructive, so safe-run **auto-rolls-back only when it can prove nothing is los
 - **`--stash`** → your changes (incl. untracked, `-u`) are stashed first, then restored after.
 - **`--allow-dirty`** → runs on a dirty tree but **disables** auto-rollback (you opted out of the net).
 
-On a dirty tree with neither `--stash` nor `--allow-dirty`, it **refuses** (exit 3) rather than risk
-your edits. Success path: commit the generated result first (if `--commit`), then `git stash pop` your
-own edits back on top. `--commit` respects pre-commit hooks (it won't force past a failing gate).
+Outside a git repository, before the first commit, or on a dirty tree with neither `--stash` nor
+`--allow-dirty`, it **refuses** (exit 3) rather than execute without a recoverable savepoint.
+`--allow-dirty --commit` is rejected because `git add -A` must never capture pre-existing edits.
+Success path: commit the generated result first (if `--commit`), then `git stash pop` your own edits
+back on top. A blocked commit exits 4; a stash-restore conflict exits 5, so automation cannot report
+false success. `--commit` respects pre-commit hooks and never forces past a failing gate.
 
 **Autonomy pattern:** for a fully unattended regen, `--stash --commit` yields a clean atomic commit
 on success and a pristine tree on failure — nothing half-generated ever persists.
@@ -116,11 +119,22 @@ files, and it only ever runs the project's own `pub get` — never `clean` or an
 refreshes the cache from the **post**-resolution lock hash, so a `pubspec.yaml` edit that changes the
 resolved versions correctly invalidates it next run.
 
-## CI note
+## CI gates
 
-The repo's GitHub Actions job is structure-only today (validate-skill.sh — no Dart toolchain), which
-keeps it green without an SDK. When the example app lands, add a Dart job
-(`dart-lang/setup-dart`) that runs `flutter-preflight.sh --require dart`, then
-`pub-get-if-changed.sh`, then `dart format`/`analyze`/`test` — and pipe any failing platform build
-through `triage-log.py` so CI logs stay readable. See [testing-and-release.md](testing-and-release.md)
-and [release-policy.md](release-policy.md).
+The repository runs five independent GitHub Actions gates:
+1. `structure` — skill/agent mirrors, JSON, script syntax, documentation integrity, and CLI tests.
+2. `cli-contracts` — black-box safety and exit-code contracts on Linux and macOS.
+3. `ai-routing` — RU/EN routing quality plus full workflow/agent coverage.
+4. `generated-contracts` — `scripts/materialize-template-fixtures.py` copies the exact canonical
+   pure-Dart, Widgets, and Flame template pairs into disposable projects; CI analyzes/tests them and
+   a freshly generated `scripts/scaffold-game-module.py` package with the real Dart/Flutter SDK.
+5. `example` — both reference games run VM-only core tests, `flutter analyze`, and `flutter test`
+   independently.
+
+This separation makes failures attributable: text/package drift cannot hide behind a game build,
+and a syntactically valid skill cannot claim its generated Dart compiles. Platform release builds
+remain the separate `.github/workflows/release-canary.yml`: it creates Android/iOS folders only in
+temporary copies, then builds both examples as release AABs and unsigned iOS apps. Signing, store
+credentials, and upload stay outside this canary. Pipe any failing platform build through
+`triage-log.py` so CI logs stay readable. See
+[testing-and-release.md](testing-and-release.md) and [release-policy.md](release-policy.md).

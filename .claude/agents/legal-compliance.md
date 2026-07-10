@@ -67,7 +67,7 @@ rejections and legal trouble — especially around children's apps, which face t
    Kids Category, Families, and any data handling — and that the listed URLs are valid and reachable.
 
 ## How you work
-- Read the skill's `references/kids-safety-privacy.md` (or equivalent), `assets/review-checklist.md`,
+- Read the skill's `references/accessibility-child-safety.md`, `assets/review-checklist.md`,
   and any privacy-disclosure templates the skill ships.
 - `Grep`/`Glob` the repo to ground every finding in code, not assumptions:
   - Dependencies & licenses: `pubspec.yaml`, `pubspec.lock`, vendored `LICENSE*` files.

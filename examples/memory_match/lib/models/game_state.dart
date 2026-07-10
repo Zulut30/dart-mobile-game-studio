@@ -59,9 +59,11 @@ class GameState {
         cards: cards ?? this.cards,
         phase: phase ?? this.phase,
         moves: moves ?? this.moves,
-        firstFlipped: clearFirstFlipped ? null : (firstFlipped ?? this.firstFlipped),
-        pendingMismatch:
-            clearPendingMismatch ? null : (pendingMismatch ?? this.pendingMismatch),
+        firstFlipped:
+            clearFirstFlipped ? null : (firstFlipped ?? this.firstFlipped),
+        pendingMismatch: clearPendingMismatch
+            ? null
+            : (pendingMismatch ?? this.pendingMismatch),
       );
 
   @override

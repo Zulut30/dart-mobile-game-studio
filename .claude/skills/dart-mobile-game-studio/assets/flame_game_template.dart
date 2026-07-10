@@ -6,9 +6,8 @@
 // mirror authoritative model state into positions/sizes — they hold no rules.
 //
 // Doctrine:
-//   * Keep ALL rules/state in the pure model below (no package:flutter,
-//     no package:flame imports there) so it is unit-tested with `dart test`
-//     on the Dart VM — no device, no widget pump.
+//   * Copy flame_game_model_template.dart into lib/models/. Keep ALL rules/state
+//     there so it is unit-tested with `dart test` on the Dart VM.
 //   * Inject a seeded Random (assets/seeded_random.dart) into the model so
 //     spawns/shuffles are reproducible in tests. Here we keep the placeholder
 //     model RNG-free; add `SeededRandom` when your genre needs it.
@@ -20,99 +19,15 @@
 // const where possible.
 
 import 'dart:math' as math;
+import 'dart:ui' show Canvas, Offset, Paint;
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart' show Colors;
 
-// ---------------------------------------------------------------------------
-// PURE MODEL — no package:flutter, no package:flame. Unit-tested with
-// `dart test`. Replace with your real model; this placeholder drives a single
-// dot that drifts right and can be nudged up by a tap intent.
-// ---------------------------------------------------------------------------
-
-/// Explicit game state machine: menu -> playing -> paused -> won/lost -> menu.
-enum GameStatus { menu, playing, paused, won, lost }
-
-/// A pure intent emitted by the renderer; the model decides the outcome.
-///
-/// Carries the tap location in *model* coordinates so hit-testing stays in the
-/// pure core and is testable without simulating a gesture.
-class TapIntent {
-  const TapIntent(this.x, this.y);
-
-  final double x;
-  final double y;
-}
-
-/// Pure, deterministic game model. No rendering imports.
-///
-/// All units are abstract "world" units the renderer maps to pixels. Owns the
-/// rules, the state machine, and the single source of truth for entity state.
-class GameModel {
-  GameModel({this.worldWidth = 400, this.worldHeight = 600});
-
-  /// Logical play-field size in world units. The renderer scales to the canvas.
-  final double worldWidth;
-  final double worldHeight;
-
-  /// Placeholder entity position (world units). Replace with your entities.
-  double entityX = 40;
-  double entityY = 300;
-
-  /// Horizontal drift speed in world units per second.
-  static const double _driftPerSecond = 60;
-
-  /// How far a tap nudges the entity upward, in world units.
-  static const double _tapNudge = 48;
-
-  GameStatus _status = GameStatus.menu;
-  GameStatus get status => _status;
-
-  /// Begin (or restart) a run. Legal from menu / won / lost.
-  void start() {
-    assert(
-      _status == GameStatus.menu ||
-          _status == GameStatus.won ||
-          _status == GameStatus.lost,
-      'start() called from $_status',
-    );
-    entityX = 40;
-    entityY = worldHeight / 2;
-    _status = GameStatus.playing;
-  }
-
-  void pause() {
-    if (_status == GameStatus.playing) _status = GameStatus.paused;
-  }
-
-  void resume() {
-    if (_status == GameStatus.paused) _status = GameStatus.playing;
-  }
-
-  /// Advance the simulation by [dt] seconds. Pure: no rendering, no I/O.
-  ///
-  /// Called once per frame by the renderer with an already-clamped [dt].
-  void advance(double dt) {
-    if (_status != GameStatus.playing) return;
-    entityX += _driftPerSecond * dt;
-    if (entityX >= worldWidth) {
-      entityX = worldWidth;
-      _status = GameStatus.won; // reached the right edge — placeholder rule
-    }
-  }
-
-  /// Apply a tap intent. The model — not the renderer — decides the effect.
-  ///
-  /// Placeholder rule: a tap above the entity nudges it up, a tap below nudges
-  /// it down. Replace with your real intent handling (jump, place, select…).
-  void handleTap(TapIntent intent) {
-    if (_status != GameStatus.playing) return;
-    final direction = intent.y < entityY ? -1.0 : 1.0;
-    entityY = (entityY + direction * _tapNudge).clamp(0.0, worldHeight);
-  }
-}
+// Adjust this relative import after copying the two templates into your app.
+import 'flame_game_model_template.dart';
 
 // ---------------------------------------------------------------------------
 // FLAME LAYER — thin renderer. Owns the loop; mirrors model state; forwards
@@ -143,13 +58,15 @@ class PlaceholderGame extends FlameGame with TapCallbacks {
   void update(double dt) {
     // Clamp dt so a dropped frame / debugger stall can't teleport entities.
     final clamped = math.min(dt, 1 / 30);
-    super.update(clamped); // advance children first
-    model.advance(clamped); // pure simulation step — no flutter/flame inside
+    model.advance(clamped); // authoritative state first
+    // Components now mirror the current frame, not the previous one.
+    super.update(clamped);
   }
 
   @override
   void onTapDown(TapDownEvent event) {
     // Map the canvas tap to model (world) coordinates, then forward as intent.
+    if (size.x <= 0 || size.y <= 0) return;
     final scaleX = model.worldWidth / size.x;
     final scaleY = model.worldHeight / size.y;
     final local = event.localPosition;
@@ -161,12 +78,14 @@ class PlaceholderGame extends FlameGame with TapCallbacks {
 class EntityComponent extends PositionComponent
     with HasGameReference<PlaceholderGame> {
   EntityComponent()
-    : super(size: Vector2.all(_kEntitySize), anchor: Anchor.center);
+      : super(size: Vector2.all(_kEntitySize), anchor: Anchor.center);
 
   static final _paint = Paint()..color = Colors.deepOrange;
+  static const _center = Offset(_kEntitySize / 2, _kEntitySize / 2);
 
   @override
   void update(double dt) {
+    super.update(dt);
     // Read the authoritative model and map world units -> canvas pixels.
     final model = game.model;
     final scaleX = game.size.x / model.worldWidth;
@@ -177,11 +96,8 @@ class EntityComponent extends PositionComponent
   @override
   void render(Canvas canvas) {
     // Placeholder vector art — no copyrighted assets.
-    canvas.drawCircle(
-      (size / 2).toOffset(),
-      _kEntitySize / 2,
-      _paint,
-    );
+    canvas.drawCircle(_center, _kEntitySize / 2, _paint);
+    super.render(canvas);
   }
 }
 

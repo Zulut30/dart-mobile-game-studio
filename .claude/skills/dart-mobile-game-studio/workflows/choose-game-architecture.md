@@ -3,7 +3,7 @@
 **Goal:** Given a game prompt, pick the smallest correct architecture (pure Flutter UI → CustomPainter → Flame → +backend / +BaaS / offline-first) and lock the pure-Dart-core seam *before* writing UI code.
 
 ## When to use
-- First decision on **every** new game, before scaffolding (`workflows/scaffold-new-game.md`).
+- First decision on **every** new game, before scaffolding (`workflows/create-new-game.md`).
 - Re-run when a prompt adds a new axis: real-time motion, online/multiplayer, leaderboards, accounts, or server-authoritative scoring.
 - Implements §18.2 (architecture decision tree).
 
@@ -124,7 +124,7 @@ Result: the same core powers (A), (B), or (C) and offline or online — you only
 - Deps & policy: `package-policy.md`, `quality-policy.md`, `monetization-policy.md`, `release-policy.md`
 - Kids safety (any online/BaaS edge): `references/accessibility-child-safety.md`, `checklists/` (child-safety, release)
 - Tests for each layer: `references/testing-and-release.md`, `references/testing-e2e-patrol.md`
-- Next step: `workflows/scaffold-new-game.md`
+- Next step: `workflows/create-new-game.md`
 
 ## Done when
 - The three inputs (motion/physics, online, data) are explicitly answered in one line each.

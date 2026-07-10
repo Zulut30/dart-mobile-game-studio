@@ -9,6 +9,9 @@ enum GamePhase {
   /// Auto-running; tap to jump.
   playing,
 
+  /// The run is frozen until the player explicitly resumes.
+  paused,
+
   /// Crashed into an obstacle; show the score and a restart.
   gameOver,
 }

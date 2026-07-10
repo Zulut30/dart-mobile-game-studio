@@ -8,8 +8,11 @@
 #   2. Skill copies (.claude/.cursor) are in sync with canonical (sync-skill.sh --check).
 #   3. Subagent copies are in sync (sync-agents.py --check) and each Claude agent name == filename.
 #   4. All *.json under the skill are valid JSON.
-#   5. Shell scripts pass `bash -n`; Python scripts compile.
+#   5. Shell scripts pass `bash -n`; Python scripts parse without writing bytecode.
 #   6. Cursor .mdc rules use a string `globs:` (not a YAML list, which Cursor ignores).
+#   7. Canonical Markdown links and inline skill paths resolve.
+#   8. RU/EN task routing meets the accuracy, critical-case, workflow, and agent thresholds.
+#   9. Critical CLI contracts pass their dependency-free black-box tests.
 #
 set -uo pipefail
 
@@ -69,9 +72,19 @@ done < <(find .agents/skills/${SKILL_NAME} -name '*.json')
 
 section "5. Script syntax"
 for s in .agents/skills/${SKILL_NAME}/scripts/*.sh; do bash -n "$s" 2>/dev/null && pass "bash -n $(basename "$s")" || err "$s: bash syntax error"; done
-pyfiles=$(find .agents/skills/${SKILL_NAME}/scripts .agents/agents -name '*.py' 2>/dev/null)
-if [[ -n "${pyfiles}" ]]; then
-  python3 -m py_compile ${pyfiles} 2>/dev/null && pass "python compile" || err "python compile error"
+if python3 - .agents/skills/${SKILL_NAME}/scripts .agents/agents <<'PY'
+import ast
+import pathlib
+import sys
+
+for root in sys.argv[1:]:
+    for path in pathlib.Path(root).rglob("*.py"):
+        ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+PY
+then
+  pass "python AST parse (no bytecode writes)"
+else
+  err "python syntax error"
 fi
 
 section "6. Cursor .mdc globs format (string, not YAML list)"
@@ -84,6 +97,29 @@ for mdc in .cursor/rules/*.mdc; do
   fi
 done
 shopt -u nullglob
+
+section "7. Documentation integrity"
+if .agents/skills/${SKILL_NAME}/scripts/doc-doctor.py >/dev/null 2>&1; then
+  pass "Markdown links and inline paths"
+else
+  err "documentation paths drifted (run: .agents/skills/${SKILL_NAME}/scripts/doc-doctor.py)"
+fi
+
+section "8. AI routing eval"
+if .agents/skills/${SKILL_NAME}/scripts/router-eval.py >/dev/null 2>&1; then
+  pass "routing accuracy, critical cases, workflows, and agents"
+else
+  err "routing eval failed (run: .agents/skills/${SKILL_NAME}/scripts/router-eval.py)"
+fi
+
+section "9. Critical CLI contracts"
+if [[ "${SKILL_SKIP_CLI_TESTS:-no}" == "yes" ]]; then
+  echo "  skip (nested validator invocation)"
+elif PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/cli -p 'test_*.py' >/dev/null 2>&1; then
+  pass "critical CLI contracts"
+else
+  err "critical CLI contracts failed (run: python3 -m unittest discover -s tests/cli -p 'test_*.py' -v)"
+fi
 
 echo
 if [[ "${fail}" -eq 0 ]]; then echo "All skill-structure checks passed."; else echo "Skill-structure checks FAILED." >&2; fi

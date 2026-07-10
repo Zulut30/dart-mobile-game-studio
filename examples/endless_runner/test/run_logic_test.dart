@@ -6,12 +6,19 @@ import 'package:endless_runner/models/runner.dart';
 import 'package:endless_runner/systems/physics.dart';
 import 'package:endless_runner/systems/run_logic.dart';
 import 'package:endless_runner/systems/seeded_random.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   const config = RunConfig();
 
   group('start', () {
+    test('menu is idle and does not consume random state', () {
+      final s = RunLogic.menu(config);
+      expect(s.phase, GamePhase.menu);
+      expect(s.distance, 0);
+      expect(s.obstacles, isEmpty);
+    });
+
     test('deals a playing run at base speed, grounded', () {
       final s = RunLogic.start(config, SeededRandom(1));
       expect(s.phase, GamePhase.playing);
@@ -30,7 +37,10 @@ void main() {
     });
 
     test('is a no-op when not playing', () {
-      final over = RunLogic.start(config, SeededRandom(1)).copyWith(phase: GamePhase.gameOver);
+      final over = RunLogic.start(
+        config,
+        SeededRandom(1),
+      ).copyWith(phase: GamePhase.gameOver);
       expect(RunLogic.advance(over, 1 / 60, SeededRandom(1)), equals(over));
     });
 
@@ -44,7 +54,10 @@ void main() {
         speed: config.baseSpeed,
         untilSpawn: 1e9,
       );
-      expect(RunLogic.advance(s, 1 / 60, SeededRandom(1)).phase, GamePhase.gameOver);
+      expect(
+        RunLogic.advance(s, 1 / 60, SeededRandom(1)).phase,
+        GamePhase.gameOver,
+      );
     });
 
     test('clamps a huge dt (no teleport)', () {
@@ -55,11 +68,15 @@ void main() {
     });
 
     test('is frame-rate independent (ramp off → exact)', () {
-      const c = RunConfig(rampPerSecond: 0); // constant speed isolates the check
+      const c = RunConfig(
+        rampPerSecond: 0,
+      ); // constant speed isolates the check
       final base = RunState(
         phase: GamePhase.playing,
         config: c,
-        runner: const Runner(y: 500), // high up: no landing, no spawn, no obstacles
+        runner: const Runner(
+          y: 500,
+        ), // high up: no landing, no spawn, no obstacles
         obstacles: const [],
         speed: c.baseSpeed,
         untilSpawn: 1e9,
@@ -81,8 +98,35 @@ void main() {
     });
 
     test('is a no-op when not playing', () {
-      final menu = RunLogic.start(config, SeededRandom(1)).copyWith(phase: GamePhase.menu);
+      final menu = RunLogic.start(
+        config,
+        SeededRandom(1),
+      ).copyWith(phase: GamePhase.menu);
       expect(RunLogic.jump(menu), equals(menu));
+    });
+  });
+
+  group('lifecycle', () {
+    test('supports pause, resume, and quit-to-menu transitions', () {
+      final playing = RunLogic.start(config, SeededRandom(1));
+      final paused = RunLogic.pause(playing);
+      expect(paused.phase, GamePhase.paused);
+      expect(RunLogic.advance(paused, 1, SeededRandom(1)), equals(paused));
+      expect(RunLogic.jump(paused), equals(paused));
+
+      final resumed = RunLogic.resume(paused);
+      expect(resumed.phase, GamePhase.playing);
+
+      final menu = RunLogic.quitToMenu(resumed);
+      expect(menu.phase, GamePhase.menu);
+      expect(menu.distance, 0);
+      expect(menu.obstacles, isEmpty);
+    });
+
+    test('pause and resume ignore illegal source phases', () {
+      final menu = RunLogic.menu(config);
+      expect(RunLogic.pause(menu), equals(menu));
+      expect(RunLogic.resume(menu), equals(menu));
     });
   });
 

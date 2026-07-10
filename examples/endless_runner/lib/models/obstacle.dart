@@ -14,11 +14,15 @@ class Obstacle {
   /// Height from the ground; clear it by jumping above `height`.
   final double height;
 
-  Obstacle copyWith({double? x}) => Obstacle(id: id, x: x ?? this.x, height: height);
+  Obstacle copyWith({double? x}) =>
+      Obstacle(id: id, x: x ?? this.x, height: height);
 
   @override
   bool operator ==(Object other) =>
-      other is Obstacle && other.id == id && other.x == x && other.height == height;
+      other is Obstacle &&
+      other.id == id &&
+      other.x == x &&
+      other.height == height;
 
   @override
   int get hashCode => Object.hash(id, x, height);

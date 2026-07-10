@@ -23,7 +23,7 @@ tuning as **data, not code**. Domain skill: `dart-mobile-game-studio`.
   completion for ages 4–8; a smooth, monotonic challenge ramp; no-fail soft feedback for the
   youngest).
 - **Tuning data:** put constants in JSON level/tuning data (gravity, jumpSpeed, spawnInterval,
-  gapBounds, lifetime, reward values), conforming to `assets/level_schema.json` — never magic
+  gapBounds, lifetime, reward values), conforming to `assets/level-schema-template.json` — never magic
   numbers in code, never `dart:ui` types in the data model.
 
 ## How you work
@@ -42,7 +42,7 @@ tuning as **data, not code**. Domain skill: `dart-mobile-game-studio`.
   it in play). Provide before/after numbers for any change.
 
 ## Output
-- Tuning file(s) (JSON) conforming to `assets/level_schema.json`, with documented parameters and
+- Tuning file(s) (JSON) conforming to `assets/level-schema-template.json`, with documented parameters and
   rationale.
 - A balance table: parameter → value → effect → target metric.
 - Estimated win rate / pacing and the assumptions/model behind it (state your method, seed count,

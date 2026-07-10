@@ -9,7 +9,6 @@ class RunConfig {
     this.maxSpeed = 520,
     this.gravity = 2400,
     this.jumpVelocity = 760,
-    this.groundY = 0,
     this.playerX = 120,
     this.playerSize = 44,
     this.spawnX = 900,
@@ -30,9 +29,6 @@ class RunConfig {
 
   /// Upward launch speed on a jump (units / s).
   final double jumpVelocity;
-
-  /// Ground line (the player's resting `y`). Up is negative `y`.
-  final double groundY;
 
   /// Fixed horizontal position of the player.
   final double playerX;

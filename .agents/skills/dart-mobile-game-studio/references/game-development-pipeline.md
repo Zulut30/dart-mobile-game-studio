@@ -100,7 +100,9 @@ ripping out an engine you didn't need.
 
 ## 7. Build & verify
 - Discover the project and run gates with `scripts/verify-flutter-project.sh` (runs `dart analyze`
-  + `dart test`, and `flutter test` if widgets exist).
+  + `dart test`, and `flutter test` if widgets exist). It skips dependency resolution by default;
+  opt into resolution with `RESOLVE_DEPS=yes`. Exit 4 means the project was not verified because a
+  project or required SDK was missing.
 - Provide explicit commands and report **real output**:
   - `dart format --output=none --set-exit-if-changed .`
   - `dart analyze` (or `flutter analyze`)

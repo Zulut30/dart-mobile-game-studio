@@ -29,7 +29,7 @@ mode/template decision downstream. Domain skill: `dart-mobile-game-studio`.
 - Pick the closest **template** from the skill and name it: coloring-shapes, sliding-puzzle,
   jigsaw, drag-and-drop-sort, memory-cards, shape-matching, tap-reaction, endless-runner-lite,
   simple-platformer. Note the nearest Casual Games Toolkit starter (basic / card / endless_runner).
-- Produce / update the **Mini-GDD** using `assets/mini-gdd-template.md`.
+- Produce / update the **Mini-GDD** using `assets/gdd-template.md`.
 
 ## How you work
 - Read `references/game-development-pipeline.md`, `references/game-templates.md`, and

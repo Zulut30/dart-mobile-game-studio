@@ -33,7 +33,7 @@ import subprocess
 import sys
 
 TOOL_NAME = "dart-doctor"
-TOOL_VERSION = "1.0"
+TOOL_VERSION = "1.1"
 
 EXCLUDED_DIR_NAMES = {"build", ".dart_tool", ".git", ".idea", ".vscode", "ios", "macos", "windows", "linux"}
 # note: android/ is partially scanned (manifest) but its Gradle/Java is out of scope here.
@@ -269,14 +269,30 @@ def check_performance(ctx):
                        f"{len(alloc_hits)} allocation(s) in a hot method" if alloc_hits else "none found",
                        "Hoist Paint/Vector2/Rect to fields; mutate with setFrom/setValues/addScaled.",
                        code="FLAME_HOT_PATH_ALLOCATION", locs=alloc_hits))
-    # dt used but not clamped
-    update_files = [f for f in ctx.src_files if re.search(r"\bvoid\s+update\s*\(\s*double\s+dt", ctx.text(f))]
-    unclamped = [ctx.rel(f) for f in update_files
-                 if not re.search(r"dt\.clamp\(|min\(\s*dt|clamp\([^)]*dt", ctx.text(f))]
-    if update_files:
+    # Check each update body, not the whole file: an unrelated clamp or a comment
+    # must not hide an unsafe loop, while named helpers such as Physics.clampDt(dt)
+    # are valid production boundaries.
+    rx_update = re.compile(r"\bvoid\s+update\s*\(\s*double\s+dt\s*\)\s*\{")
+    rx_dt_clamp = re.compile(
+        r"\bdt\s*\.clamp\s*\("
+        r"|\b(?:math\.)?min\s*\(\s*dt\s*,"
+        r"|\b(?:[A-Za-z_]\w*\.)*\w*clamp\w*\s*\(\s*dt\b",
+        re.IGNORECASE,
+    )
+    update_count = 0
+    unclamped = []
+    for f in ctx.src_files:
+        text = ctx.text(f)
+        for match in rx_update.finditer(text):
+            update_count += 1
+            body = _balanced_body(text, match.end() - 1)
+            if not rx_dt_clamp.search(body):
+                line = text[: match.start()].count("\n") + 1
+                unclamped.append(f"{ctx.rel(f)}:{line}")
+    if update_count:
         out.append(Finding("WARN" if unclamped else "PASS", "Clamp dt in update()",
                            f"{len(unclamped)} update(dt) without a visible clamp" if unclamped else "dt clamped",
-                           "Flame does NOT clamp dt — `final d = math.min(dt, 1/30);` before stepping.",
+                           "Flame does NOT clamp dt — use `math.min(dt, 1/30)` or a named clamp helper before stepping.",
                            code="FLAME_DT_IGNORED", locs=unclamped))
     # setState in build
     ss = grep(ctx, ctx.src_files, r"Widget\s+build\s*\([^)]*\)\s*(?:async\s*)?\{[^}]*setState\(")

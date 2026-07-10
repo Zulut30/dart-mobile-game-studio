@@ -38,24 +38,26 @@
 .
 ├─ .agents/skills/dart-mobile-game-studio/   ← КАНОНИЧЕСКИЙ навык (правьте здесь)
 │  ├─ SKILL.md                               ← точка входа: 9-шаговый workflow + правила
-│  ├─ references/   (20 файлов)              ← пайплайн, архитектура, Flame, a11y, тесты, перф,
+│  ├─ references/   (21 файл)                ← пайплайн, архитектура, Flame, a11y, тесты, перф,
 │  │  │                                         каталог ошибок, безопасная автоматизация…
 │  │  └─ dart/      (7 файлов)               ← «мастерство Dart» (как писать отличный Dart)
-│  ├─ workflows/    (20 файлов)              ← пошаговые playbook'и (создать игру, отладка, релиз…)
+│  ├─ workflows/    (21 файл)                ← пошаговые playbook'и (создать игру, локализация, релиз…)
 │  ├─ templates/    (9 + README)            ← жанровые дизайн-брифы + скелеты (casual…ui-heavy)
-│  ├─ checklists/   (11 файлов)              ← tick-листы для ревьюера/агента по каждой области
-│  ├─ assets/       (8 файлов)               ← шаблоны: GDD, JSON-схема уровня, Flame/Widget-шаблоны,
-│  │                                            seeded RNG, строгий analysis_options, чек-листы
-│  └─ scripts/      (9 файлов)               ← sync, validate, verify, scaffold, levels, dart-doctor,
-│                                               preflight, safe-run, triage-log, pub-cache
+│  ├─ checklists/   (12 файлов)              ← tick-листы для ревьюера/агента по каждой области
+│  ├─ assets/       (11 файлов)              ← парные pure-Dart + Flame/Widget-шаблоны, GDD,
+│  │                                            JSON-схема, seeded RNG, analysis_options, чек-листы
+│  └─ scripts/      (18 файлов)              ← sync, AI context/router/eval, self-review, validation,
+│                                               fixture/scaffold, doctors, preflight, safe-run, logs, pub-cache
 ├─ .agents/agents/  (14 ролей + README)      ← КАНОНИЧЕСКИЕ субагенты + sync-agents.py
 ├─ .claude/skills/…  .claude/agents/         ← зеркала для Claude Code   (синхронизируются)
 ├─ .cursor/skills/…  .cursor/rules/agents/   ← зеркала для Cursor        (синхронизируются)
+├─ .codex/agents/                            ← 14 TOML-профилей Codex    (синхронизируются)
 ├─ .cursor/rules/                            ← Cursor .mdc-правила (общее / архитектура / тесты)
 ├─ docs/ai-game-dev/upstream-build-spec.md   ← полная исходная спецификация (21 раздел)
 ├─ examples/memory_match/                    ← референс-игра (widgets): pure-Dart ядро + тесты + Flutter-UI
 ├─ examples/endless_runner/                  ← референс-игра (Flame): pure-ядро + FlameGame + тесты
-├─ .github/workflows/ci.yml                  ← CI: структурный gate + analyze/test примера
+├─ evals/task-routing.jsonl                  ← versioned RU/EN routing corpus
+├─ .github/workflows/                        ← CI + Android/iOS release canary
 ├─ AGENTS.md                                 ← точка входа для Codex / AGENTS.md-инструментов
 └─ CLAUDE.md                                 ← точка входа для Claude Code
 ```
@@ -97,7 +99,7 @@
 ## 14 специалистов-субагентов
 
 Для крупных задач навык разворачивает «команду» из 14 ролей (канонические — в `.agents/agents/`,
-зеркалируются в `.claude/agents/` и `.cursor/rules/agents/`). Субагенты не могут вызывать друг друга,
+зеркалируются в `.claude/agents/`, `.cursor/rules/agents/` и `.codex/agents/`). Субагенты не могут вызывать друг друга,
 поэтому `game-coordinator` возвращает план делегирования, который главный поток выполняет по шагам.
 
 - **Сборка:** `game-coordinator` (PM/декомпозиция) → `game-designer` → `engine-architect` →
@@ -161,13 +163,14 @@ match-3, генерация лабиринтов, разрешимость пя�
 
 ### `checklists/` — tick-листы для ревью
 `dart-code-quality` · `flutter-ui-quality` · `game-architecture` · `flame-quality` · `performance` ·
-`accessibility` · `localization` · `monetization` · `app-store-release` · `google-play-release` · `testing`.
+`accessibility` · `localization` · `asset-licensing` · `monetization` · `app-store-release` ·
+`google-play-release` · `testing`.
 
-### `workflows/` — пошаговые playbook'и (20)
+### `workflows/` — пошаговые playbook'и (21)
 *Сборка:* `create-new-game` · `choose-game-architecture` · `setup-flutter-project` ·
 `setup-flame-project` · `add-game-loop` · `add-level-system` · `add-animations` ·
-`add-assets-pipeline` · `add-audio` · `add-state-management` · `add-navigation` · `add-save-system` ·
-`write-tests`.
+`add-assets-pipeline` · `add-audio` · `add-localization` · `add-state-management` · `add-navigation` ·
+`add-save-system` · `write-tests`.
 *Отладка и перф:* `debug-common-errors` (triage → классификатор → фикс) · `run-performance-audit`.
 *Релиз:* `prepare-ios-release` · `prepare-android-release`.
 *Монетизация (с гейтом «дети vs 13+»):* `add-monetization` · `add-ads` · `add-in-app-purchases`.
@@ -182,7 +185,8 @@ match-3, генерация лабиринтов, разрешимость пя�
 ## Шаблоны и скрипты
 
 **`assets/` (копировать и адаптировать):** `gdd-template.md`, `level-schema-template.json`
-(JSON-схема Draft-07 для данных уровня), `flame_game_template.dart`, `flutter_game_widget_template.dart`,
+(JSON-схема Draft-07 для данных уровня), парные `flame_game_model_template.dart` +
+`flame_game_template.dart` и `tile_game_model_template.dart` + `flutter_game_widget_template.dart`,
 `seeded_random.dart`, `analysis_options.yaml` (строгие линты), `review-checklist.md`, `privacy-checklist.md`.
 
 **`scripts/`:**
@@ -190,13 +194,21 @@ match-3, генерация лабиринтов, разрешимость пя�
 | Скрипт | Назначение |
 |---|---|
 | `sync-skill.sh` | зеркалирует канонический навык в `.claude/` и `.cursor/` (`--check` для CI) |
-| `validate-skill.sh` | структурный gate: frontmatter, синхронность копий, валидность JSON, синтаксис скриптов |
-| `verify-flutter-project.sh` | находит Flutter/Dart-проект и запускает `dart analyze` + тесты |
+| `ai-context-pack.py` | AI context pack для агента: проекты, режимы, команды, правила, references, agents, findings (`--markdown`, `--json`, `--project`) |
+| `task-router.py` | токенизирует задачу, сохраняет составные intents и маршрутизирует их в workflows/references/templates/agents/required checks (`--markdown`, `--json`, `--project`) |
+| `router-eval.py` | измеряет router на RU/EN corpus: ≥95% accuracy, 100% critical и полное workflow/agent coverage |
+| `self-review-loop.py` | замыкает цикл проверки ИИ после правки; repo-wide аудит автоматически проверяет все найденные проекты вместо ложного успеха без target |
+| `discover-projects.sh` | единый поиск Dart/Flutter `pubspec.yaml` для single-project и multi-example repo (`--all`, `--dirs`, `--json`) |
+| `doc-doctor.py` | проверяет Markdown links и backticked skill paths, которые обычный link checker не видит (`--json`) |
+| `validate-skill.sh` | структурный gate + dependency-free black-box тесты критических CLI-контрактов |
+| `verify-flutter-project.sh` | source-preserving format/analyze/test без неявного `pub get`; `RESOLVE_DEPS=yes` включает его явно, exit 4 означает «не проверено» |
 | `scaffold-game-module.py` | неразрушающий скелет собираемого Dart-пакета под жанр |
-| `validate-levels.py` | валидация JSON уровней против `level-schema-template.json` |
+| `materialize-template-fixtures.py` | создаёт временные pure-Dart, Widgets и Flame проекты для compiler-backed CI шаблонов |
+| `validate-levels.py` | schema-driven валидация JSON уровней с эквивалентным dependency-free режимом |
 | `dart-doctor.py` | health-check проекта: 8 измерений (архитектура/Dart/перф/kids-safety/a11y/…), PASS/WARN/FAIL, `--only`/`--json`/`--build` |
+| `design-doctor.py` | статический UX/a11y/game-design gate: screen map, tap semantics, Reduce Motion, responsive layout, visual states, Flame overlays |
 | `flutter-preflight.sh` | gate окружения+git перед сборкой/codegen (`--require`, `--git-clean`); мягкая деградация |
-| `safe-run.sh` | огораживает деструктивную команду git-savepoint'ом: атомарный коммит при успехе / откат при провале |
+| `safe-run.sh` | fail-closed git-savepoint: атомарный коммит при успехе / откат при провале, без захвата pre-existing edits |
 | `triage-log.py` | свод 1000s-строчного Gradle/Xcode/Dart-лога к ~10–25 строкам + вероятные причины |
 | `pub-get-if-changed.sh` | пропускает `pub get`, если `pubspec.lock` не менялся (хэш-кэш в `.dart_tool/`) |
 
@@ -246,26 +258,37 @@ flutter build ipa        # релизная сборка под iOS
 
 ### CI
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) сейчас гоняет **только структурный gate**
-(`validate-skill.sh`): frontmatter и `name == имя папки`, синхронность копий навыка и агентов,
-валидность JSON, синтаксис bash/python, формат Cursor-глобов. Чистый python/bash — **Dart-тулчейн не
-нужен**, поэтому CI стабильно зелёный. Dart-гейты (`dart format`/`analyze`/`test`, Patrol) будут
-добавлены вместе с примером игры, чтобы их можно было проверить end-to-end.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) гоняет пять gate:
+1. **structure** — `validate-skill.sh`: frontmatter, синхронность копий навыка и агентов,
+   валидность JSON, документационные пути, синтаксис без bytecode-записи, формат Cursor-глобов и CLI contracts.
+2. **cli-contracts** — black-box safety/exit-code/schema/routing suite на Linux и macOS.
+3. **ai-routing** — 52 RU/EN сценария, 100% critical cases и полное покрытие workflows/agents.
+4. **generated-contracts** — реальный compile/analyze/test pure-Dart, Widgets, Flame шаблонов и
+   свежего результата scaffold.
+5. **example** — matrix по `examples/memory_match` и `examples/endless_runner`: отдельный
+   `dart test` pure core, затем `flutter analyze` + `flutter test` на реальном Flutter SDK.
+
+Отдельный [`release-canary.yml`](.github/workflows/release-canary.yml) еженедельно и при изменениях
+примеров собирает оба проекта как Android AAB и unsigned iOS release во временных platform runners.
+
+Оба compiler-backed job также блокируют drift через
+`dart format --output=none --set-exit-if-changed .`.
 
 ---
 
 ## Дорожная карта
 
 **Готово:**
-- [x] **20 workflow'ов** — включая отладку (`debug-common-errors`), перф-аудит (`run-performance-audit`),
+- [x] **21 workflow** — включая локализацию, отладку (`debug-common-errors`), перф-аудит (`run-performance-audit`),
       релиз в оба стора и монетизацию (ads/IAP с гейтом «дети vs 13+»).
 - [x] **`scripts/dart-doctor.py`** — health-check проекта по 8 измерениям (протестирован на синтетике).
 - [x] **Каталог ошибок** `common-pitfalls.md` + 4 скрипта безопасной автоматизации (preflight, safe-run,
       triage-log, pub-cache) с политикой `ci-and-automation.md`.
-- [x] **2 референс-игры** — `examples/memory_match/` (widgets, 23 теста) + `examples/endless_runner/`
-      (Flame: dt-clamp, clearable-спавн, frame-rate independence, AABB-коллизии). Обе **проходят CI**.
-- [x] **Dart CI** — job `example` (`flutter analyze` + `flutter test` через `subosito/flutter-action`)
-      рядом со структурным gate. Зелёный CI = доказательство, что код навыка компилируется и проходит тесты.
+- [x] **2 референс-игры** — widgets + Flame: полный lifecycle/pause, responsive shell,
+      accessibility, VM-only core tests, dt-clamp, seeded fairness и AABB-коллизии.
+- [x] **Compiler-backed CI** — реальные `dart/flutter analyze` + тесты для двух примеров,
+      pure-Dart/Widgets/Flame шаблонов и результата scaffold, рядом со структурным и AI-routing gate.
+- [x] **Format gate** — официальный Dart formatter проверяет примеры и весь генерируемый код.
 - [x] **`LICENSE`** — MIT.
 - [x] **9 жанровых дизайн-шаблонов** (`templates/`) — casual, coloring, card, puzzle, platformer-flame,
       endless-runner, quiz, educational-kids, ui-heavy: заполняемый Mini-GDD + архитектурный скелет.
@@ -273,7 +296,6 @@ flutter build ipa        # релизная сборка под iOS
       параллельная оркестрация.
 
 **В работе / опционально:**
-- [ ] **Формат-гейт в CI** — добавить `dart format --set-exit-if-changed` после прогона форматтера на машине с SDK.
 - [ ] **GPT-прокси** (опционально) — MCP к OpenAI для реального GPT внутри Claude Code (вариант C мульти-модельной системы).
 
 ---

@@ -39,7 +39,8 @@ class CardTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final faceUp = card.isFaceUp || card.isMatched;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final color = _colors[card.faceId % _colors.length];
     final icon = _faces[card.faceId % _faces.length];
 
@@ -50,7 +51,9 @@ class CardTile extends StatelessWidget {
               color: color,
               borderRadius: BorderRadius.circular(12),
               // a matched pair keeps a subtle ring so progress reads without color alone
-              border: card.isMatched ? Border.all(color: Colors.white, width: 3) : null,
+              border: card.isMatched
+                  ? Border.all(color: Colors.white, width: 3)
+                  : null,
             ),
             child: Center(child: Icon(icon, color: Colors.white, size: 40)),
           )
@@ -60,7 +63,10 @@ class CardTile extends StatelessWidget {
               color: theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.question_mark_rounded, color: theme.colorScheme.onPrimaryContainer),
+            child: Icon(
+              Icons.question_mark_rounded,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
           );
 
     return Semantics(
@@ -70,10 +76,14 @@ class CardTile extends StatelessWidget {
           : (faceUp ? 'showing symbol ${card.faceId + 1}' : 'face down'),
       button: !card.isMatched,
       enabled: !card.isMatched,
+      onTap: card.isMatched ? null : onTap,
+      excludeSemantics: true,
       child: GestureDetector(
+        excludeFromSemantics: true,
         onTap: card.isMatched ? null : onTap,
         child: AnimatedSwitcher(
-          duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+          duration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
           child: face,
         ),
       ),

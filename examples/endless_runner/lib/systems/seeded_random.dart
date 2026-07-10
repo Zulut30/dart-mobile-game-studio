@@ -50,8 +50,7 @@ class SeededRandom implements Random {
   ///
   /// A seed of `0` is remapped to the SplitMix64 golden-ratio constant so the
   /// state never starts degenerate.
-  SeededRandom(int seed)
-      : _state = (seed == 0 ? _goldenGamma : seed) & _mask64;
+  SeededRandom(int seed) : _state = (seed == 0 ? _goldenGamma : seed) & _mask64;
 
   /// SplitMix64 increment / golden-ratio constant (`floor(2^64 / phi)`).
   static const int _goldenGamma = 0x9E3779B97F4A7C15;

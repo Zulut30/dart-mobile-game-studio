@@ -31,7 +31,7 @@ Use one predictable tree at the project root. Flame, by convention, looks under 
 assets/
   images/        # PNG sprites + atlases for Flame (rasters)
   audio/         # short SFX + music (ogg/mp3/wav)
-  data/          # level JSON, tuning tables (see add-level-data workflow)
+  data/          # level JSON, tuning tables (see add-level-system workflow)
   fonts/         # .ttf / .otf you are licensed to ship
 lib/
   art/           # CustomPainter / SVG placeholder art (Dart, not a bundled asset)
@@ -203,4 +203,4 @@ For pure-Dart core tests, asset loading is **not** under test (it needs the Flut
 - **Hot-reload didn't pick up a new asset.** The asset manifest is read at startup — do a full restart after editing `pubspec.yaml`.
 
 ## Cross-links
-- `references/asset-pipeline.md` (source) · `references/accessibility-child-safety.md` (audio/no-copyright) · `references/performance-checklist.md` (atlas, caching) · `references/flutter-flame-patterns.md` (Flame load patterns) · `references/package-policy.md` (justifying `flutter_svg`/`flame_audio`/atlas loaders) · `references/production-quality.md` (dispose) · `checklists/asset-licensing.md` · workflow `workflows/add-level-data.md` (JSON in `assets/data/`) · `assets/flame_game_template.dart`, `assets/flutter_game_widget_template.dart`.
+- `references/asset-pipeline.md` (source) · `references/accessibility-child-safety.md` (audio/no-copyright) · `references/performance-checklist.md` (atlas, caching) · `references/flutter-flame-patterns.md` (Flame load patterns) · `references/package-policy.md` (justifying `flutter_svg`/`flame_audio`/atlas loaders) · `references/production-quality.md` (dispose) · `checklists/asset-licensing.md` · workflow `workflows/add-level-system.md` (JSON in `assets/data/`) · `assets/flame_game_template.dart`, `assets/flutter_game_widget_template.dart`.

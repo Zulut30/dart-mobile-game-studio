@@ -22,6 +22,18 @@ Across all templates the **pure-Dart core owns the rules and the state machine**
 Inject the seeded RNG from `assets/seeded_random.dart` anywhere shuffles/spawns must be
 reproducible in tests.
 
+For a production starting point, copy both files in the relevant pair rather than pasting a
+renderer alone:
+- **Flutter widgets:** `assets/tile_game_model_template.dart` +
+  `assets/flutter_game_widget_template.dart`.
+- **Flame/hybrid:** `assets/flame_game_model_template.dart` +
+  `assets/flame_game_template.dart`.
+
+The paired cores reject invalid constructor data at runtime, expose the full state machine, and
+contain no Flutter/Flame/UI imports. The renderers own display strings, lifecycle handling,
+accessibility, and coordinate mapping. Replace placeholder copy through `workflows/add-localization.md`
+before release.
+
 ---
 
 ## coloring-shapes  (Flutter-widgets-only)
@@ -54,7 +66,7 @@ the topmost overlapping region wins. Palette is a `Row` of swatch buttons; provi
 Wrap each region in `Semantics(label: 'Region 3, blue', button: true)`.
 
 **Data:** regions as normalized (0..1) path points in JSON, scaled to the canvas at paint time so
-art stays crisp at any DPI. Palette is a JSON list of ARGB ints. See `assets/level_schema.json`.
+art stays crisp at any DPI. Palette is a JSON list of ARGB ints. See `assets/level-schema-template.json`.
 
 **Tests:** filling a region changes only that region; `apply` is pure (input `Picture`
 unmutated); undo restores the previous snapshot; `isComplete` flips only when every region is

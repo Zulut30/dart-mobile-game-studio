@@ -9,173 +9,56 @@
 // model for your own — the layering is what matters, not this rule set.
 //
 // Layering (see references/flutter-game-architecture.md):
-//   * `_TileGameModel` / `GameStatus` — PURE Dart, no `package:flutter`.
-//     Owns the rules and the menu -> playing -> paused -> won state machine.
+//   * `TileGameModel` / `GameStatus` — PURE Dart in
+//     tile_game_model_template.dart, with no `package:flutter` import.
+//     Owns the rules and the menu -> playing -> paused -> won/lost state machine.
 //     Unit-test it with `dart test` on the VM (no device, no widget pump).
 //   * `GameController extends ValueNotifier<GameStatus>` — a thin adapter
 //     that wraps the pure model and notifies the view. It holds NO rules.
 //   * Widgets (`GameScreen`, `_Playfield`, `_HudPainter`, ...) — read the
 //     model, paint it, forward taps back as intents. No rules here.
 //
-// Replace `_TileGameModel` with your real model and keep this structure.
+// Replace `TileGameModel` with your real model and keep this structure.
 // In a real project these layers live in separate files:
 //   lib/models/ (pure)  ->  lib/game/ (adapter)  ->  lib/widgets/ (render).
-// A seeded `Random` is injected so the shuffle is reproducible in tests; the
-// skill ships `assets/seeded_random.dart` (a `Random` implementation) for the
-// production wrapper. Here we use `dart:math`'s `Random([seed])` directly.
+// A seeded `Random` is required so the shuffle is reproducible in tests. The
+// renderer chooses/persists the seed; the core never creates randomness itself.
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+// Adjust this relative import after copying the two templates into your app.
+import 'tile_game_model_template.dart';
+
 void main() => runApp(const TileGameApp());
-
-// =============================================================================
-// PURE MODEL — no `package:flutter` / `package:flame`. Fully VM-testable.
-// =============================================================================
-
-/// The whole game's state machine: menu -> playing -> paused -> won -> menu.
-enum GameStatus { menu, playing, paused, won }
-
-/// One board tile. Immutable; the model rebuilds the list on each change so the
-/// renderer can diff old vs new cheaply.
-@immutable
-class Tile {
-  const Tile({
-    required this.id,
-    required this.colorValue,
-    this.matched = false,
-  });
-
-  /// Stable position id (0-based), used as the [Semantics] index too.
-  final int id;
-
-  /// Plain ARGB int (e.g. `0xFFEF5350`), NOT a `dart:ui` Color — keeps the
-  /// model `flutter`-free. The renderer wraps it in `Color(colorValue)`.
-  final int colorValue;
-
-  /// Whether this tile has been tapped/cleared.
-  final bool matched;
-
-  Tile copyWith({bool? matched}) => Tile(
-    id: id,
-    colorValue: colorValue,
-    matched: matched ?? this.matched,
-  );
-}
-
-/// Pure rules + transitions. The single source of truth. No rendering, no
-/// plugins, no globals — inject a seeded [math.Random] for a reproducible
-/// deal.
-class _TileGameModel {
-  _TileGameModel({required this.palette, this.tileCount = 12, math.Random? rng})
-    : _rng = rng ?? math.Random(),
-      assert(palette.isNotEmpty, 'palette must not be empty'),
-      assert(tileCount > 0, 'tileCount must be positive');
-
-  /// ARGB ints to draw the tiles from (cycled if smaller than [tileCount]).
-  final List<int> palette;
-  final int tileCount;
-  final math.Random _rng;
-
-  GameStatus _status = GameStatus.menu;
-  GameStatus get status => _status;
-
-  List<Tile> _tiles = const <Tile>[];
-  List<Tile> get tiles => List<Tile>.unmodifiable(_tiles);
-
-  int _score = 0;
-  int get score => _score;
-
-  /// Progress, derived not stored. `progress` (0..1) feeds the visual bar;
-  /// `progressLabel` feeds the HUD text and Semantics.
-  int get matchedCount => _tiles.where((t) => t.matched).length;
-  double get progress => tileCount == 0 ? 0 : matchedCount / tileCount;
-  String get progressLabel => '$matchedCount of $tileCount cleared';
-
-  /// Deal a fresh board and begin play. Legal from menu or after a win
-  /// (the "play again" path).
-  void start() {
-    assert(_status == GameStatus.menu || _status == GameStatus.won);
-    _tiles = _deal();
-    _score = 0;
-    _status = GameStatus.playing;
-  }
-
-  void pause() {
-    if (_status == GameStatus.playing) _status = GameStatus.paused;
-  }
-
-  void resume() {
-    if (_status == GameStatus.paused) _status = GameStatus.playing;
-  }
-
-  /// Return to the menu from any state (e.g. the system backgrounding the app).
-  void quitToMenu() => _status = GameStatus.menu;
-
-  /// Forward a tap intent. Ignored unless playing and the tile is still open;
-  /// returns true iff the board actually changed (so the view can react with
-  /// sound/haptic without re-deriving the rule).
-  bool tapTile(int id) {
-    if (_status != GameStatus.playing) return false;
-    final index = _tiles.indexWhere((t) => t.id == id);
-    if (index < 0 || _tiles[index].matched) return false;
-
-    _tiles = List<Tile>.of(_tiles)
-      ..[index] = _tiles[index].copyWith(matched: true);
-    _score++;
-    if (_tiles.every((t) => t.matched)) _status = GameStatus.won;
-    return true;
-  }
-
-  List<Tile> _deal() {
-    final dealt = List<Tile>.generate(
-      tileCount,
-      (i) => Tile(id: i, colorValue: palette[i % palette.length]),
-    );
-    _shuffle(dealt); // seeded Fisher–Yates: same seed => same board.
-    // Reassign ids to grid order so position == id after the shuffle.
-    return List<Tile>.generate(
-      tileCount,
-      (i) => Tile(id: i, colorValue: dealt[i].colorValue),
-    );
-  }
-
-  /// Deterministic in-place Fisher–Yates using the injected [math.Random].
-  void _shuffle(List<Tile> list) {
-    for (var i = list.length - 1; i > 0; i--) {
-      final j = _rng.nextInt(i + 1);
-      final tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
-  }
-}
 
 // =============================================================================
 // CONTROLLER — thin adapter. Wraps the pure model; holds NO rules.
 // =============================================================================
 
-/// Bridges the pure [_TileGameModel] to the widget tree. Extends
+/// Bridges the pure [TileGameModel] to the widget tree. Extends
 /// [ValueNotifier] so a [ValueListenableBuilder] rebuilds only the subtree
 /// that reads it. Every mutator delegates to the model, then notifies.
 class GameController extends ValueNotifier<GameStatus> {
-  GameController({required List<int> palette, int tileCount = 12, int? seed})
-    : _model = _TileGameModel(
-        palette: palette,
-        tileCount: tileCount,
-        rng: seed == null ? null : math.Random(seed),
-      ),
-      super(GameStatus.menu);
+  GameController({
+    required List<int> palette,
+    required math.Random rng,
+    int tileCount = 12,
+  })  : _model =
+            TileGameModel(palette: palette, tileCount: tileCount, rng: rng),
+        super(GameStatus.menu);
 
-  final _TileGameModel _model;
+  final TileGameModel _model;
 
   // Read-only passthroughs for the view.
   GameStatus get status => _model.status;
   List<Tile> get tiles => _model.tiles;
   int get score => _model.score;
   double get progress => _model.progress;
-  String get progressLabel => _model.progressLabel;
+  int get matchedCount => _model.matchedCount;
+  int get tileCount => _model.tileCount;
+  String get progressLabel => '$matchedCount of $tileCount cleared';
 
   void start() {
     _model.start();
@@ -189,6 +72,11 @@ class GameController extends ValueNotifier<GameStatus> {
 
   void resume() {
     _model.resume();
+    value = _model.status;
+  }
+
+  void lose() {
+    _model.lose();
     value = _model.status;
   }
 
@@ -250,10 +138,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     0xFFAB47BC, // purple
   ];
 
-  // No fixed seed => fresh board each session. Pass `seed:` for a fixed deal.
+  // Replace 1 with a persisted level/session seed for fresh but replayable deals.
   late final GameController _controller = GameController(
     palette: _palette,
     tileCount: 12,
+    rng: math.Random(1),
   );
 
   @override
@@ -290,21 +179,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             final body = switch (status) {
               GameStatus.menu => _MenuView(onPlay: _controller.start),
               GameStatus.playing => _PlayingView(
-                controller: _controller,
-                reduceMotion: reduceMotion,
-                onPause: _controller.pause,
-              ),
+                  controller: _controller,
+                  reduceMotion: reduceMotion,
+                  onPause: _controller.pause,
+                ),
               GameStatus.paused => _PlayingView(
-                controller: _controller,
-                reduceMotion: reduceMotion,
-                onPause: _controller.pause,
-                pausedOverlay: _PausedOverlay(onResume: _controller.resume),
-              ),
+                  controller: _controller,
+                  reduceMotion: reduceMotion,
+                  onPause: _controller.pause,
+                  pausedOverlay: _PausedOverlay(onResume: _controller.resume),
+                ),
               GameStatus.won => _ResultView(
-                progressLabel: _controller.progressLabel,
-                score: _controller.score,
-                onPlayAgain: _controller.start,
-              ),
+                  title: 'You did it!',
+                  progressLabel: _controller.progressLabel,
+                  score: _controller.score,
+                  onPlayAgain: _controller.start,
+                ),
+              GameStatus.lost => _ResultView(
+                  title: 'Try again',
+                  progressLabel: _controller.progressLabel,
+                  score: _controller.score,
+                  onPlayAgain: _controller.start,
+                ),
             };
 
             // Cross-fade between top-level states; instant when Reduce Motion.
@@ -432,10 +328,7 @@ class _Hud extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Score $score',
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text('Score $score', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 6),
                     SizedBox(
                       height: 8,
@@ -443,8 +336,7 @@ class _Hud extends StatelessWidget {
                         size: const Size(double.infinity, 8),
                         painter: _HudPainter(
                           progress: progress,
-                          trackColor:
-                              theme.colorScheme.surfaceContainerHighest,
+                          trackColor: theme.colorScheme.surfaceContainerHighest,
                           fillColor: theme.colorScheme.primary,
                         ),
                       ),
@@ -562,19 +454,17 @@ class _TileButton extends StatelessWidget {
       selected: tile.matched,
       label: 'Tile ${index + 1} of $total',
       value: tile.matched ? 'cleared' : 'open',
+      onTap: tile.matched ? null : onTap,
       // The GestureDetector below is the real hit target; exclude its implicit
       // semantics so the screen reader reads only this node.
       excludeSemantics: true,
       child: GestureDetector(
         onTap: tile.matched ? null : onTap,
         child: AnimatedContainer(
-          duration: reduceMotion
-              ? Duration.zero
-              : const Duration(milliseconds: 180),
+          duration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: Color(tile.colorValue).withValues(
-              alpha: tile.matched ? 0.35 : 1.0,
-            ),
+            color: Color(tile.colorValue).withAlpha(tile.matched ? 89 : 255),
             borderRadius: BorderRadius.circular(16),
           ),
           child: tile.matched
@@ -615,16 +505,18 @@ class _PausedOverlay extends StatelessWidget {
 }
 
 // -----------------------------------------------------------------------------
-// Won
+// Result
 // -----------------------------------------------------------------------------
 
 class _ResultView extends StatelessWidget {
   const _ResultView({
+    required this.title,
     required this.progressLabel,
     required this.score,
     required this.onPlayAgain,
   });
 
+  final String title;
   final String progressLabel;
   final int score;
   final VoidCallback onPlayAgain;
@@ -638,11 +530,11 @@ class _ResultView extends StatelessWidget {
         children: [
           Semantics(
             container: true,
-            label: 'You did it! Score $score. $progressLabel.',
+            label: '$title. Score $score. $progressLabel.',
             child: ExcludeSemantics(
               child: Column(
                 children: [
-                  Text('You did it!', style: theme.textTheme.headlineMedium),
+                  Text(title, style: theme.textTheme.headlineMedium),
                   const SizedBox(height: 8),
                   Text('Score $score', style: theme.textTheme.titleMedium),
                 ],

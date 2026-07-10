@@ -1,13 +1,10 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_match/models/game_phase.dart';
 import 'package:memory_match/models/game_state.dart';
 import 'package:memory_match/models/memory_card.dart';
+import 'package:test/test.dart';
 
 GameState sample() => const GameState(
-      cards: [
-        MemoryCard(id: 0, faceId: 0),
-        MemoryCard(id: 1, faceId: 0),
-      ],
+      cards: [MemoryCard(id: 0, faceId: 0), MemoryCard(id: 1, faceId: 0)],
       phase: GamePhase.playing,
       firstFlipped: 0,
     );
@@ -32,15 +29,21 @@ void main() {
   });
 
   group('copyWith', () {
-    test('clearFirstFlipped sets it to null; a null arg leaves it unchanged', () {
-      expect(sample().copyWith(clearFirstFlipped: true).firstFlipped, isNull);
-      expect(sample().copyWith().firstFlipped, 0); // unchanged
-    });
+    test(
+      'clearFirstFlipped sets it to null; a null arg leaves it unchanged',
+      () {
+        expect(sample().copyWith(clearFirstFlipped: true).firstFlipped, isNull);
+        expect(sample().copyWith().firstFlipped, 0); // unchanged
+      },
+    );
 
     test('clearPendingMismatch sets it to null', () {
       final pending = sample().copyWith(pendingMismatch: [0, 1]);
       expect(pending.isLocked, isTrue);
-      expect(pending.copyWith(clearPendingMismatch: true).pendingMismatch, isNull);
+      expect(
+        pending.copyWith(clearPendingMismatch: true).pendingMismatch,
+        isNull,
+      );
     });
   });
 

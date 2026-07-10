@@ -1,8 +1,8 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_match/models/game_phase.dart';
 import 'package:memory_match/models/game_state.dart';
 import 'package:memory_match/models/memory_card.dart';
 import 'package:memory_match/systems/game_logic.dart';
+import 'package:test/test.dart';
 
 /// A hand-built 4-card board with known positions, so every expected result is
 /// exact: pair 0 sits in slots 0 & 2, pair 1 in slots 1 & 3.
@@ -33,7 +33,10 @@ void main() {
 
   group('second flip', () {
     test('matching pair locks both as matched, counts one move', () {
-      final s = GameLogic.flip(GameLogic.flip(board(), 0), 2); // slots 0 & 2 = pair 0
+      final s = GameLogic.flip(
+        GameLogic.flip(board(), 0),
+        2,
+      ); // slots 0 & 2 = pair 0
       expect(s.cards[0].isMatched, isTrue);
       expect(s.cards[2].isMatched, isTrue);
       expect(s.cards[0].isFaceUp, isTrue);
@@ -45,7 +48,10 @@ void main() {
     });
 
     test('mismatch reveals both, counts a move, and locks input', () {
-      final s = GameLogic.flip(GameLogic.flip(board(), 0), 1); // face 0 vs face 1
+      final s = GameLogic.flip(
+        GameLogic.flip(board(), 0),
+        1,
+      ); // face 0 vs face 1
       expect(s.cards[0].isFaceUp, isTrue);
       expect(s.cards[1].isFaceUp, isTrue);
       expect(s.cards[0].isMatched, isFalse);
@@ -111,12 +117,20 @@ void main() {
   });
 
   group('pause', () {
-    test('toggles playing <-> paused only', () {
-      final paused = GameLogic.togglePause(board());
+    test('supports explicit pause, resume, and menu transitions', () {
+      final paused = GameLogic.pause(board());
       expect(paused.phase, GamePhase.paused);
-      expect(GameLogic.togglePause(paused).phase, GamePhase.playing);
+      expect(GameLogic.resume(paused).phase, GamePhase.playing);
+      final menu = GameLogic.quitToMenu(paused);
+      expect(menu.phase, GamePhase.menu);
+      expect(menu.firstFlipped, isNull);
+      expect(menu.pendingMismatch, isNull);
+    });
+
+    test('lifecycle transitions are no-ops outside their source phase', () {
       final won = board().copyWith(phase: GamePhase.won);
-      expect(GameLogic.togglePause(won), equals(won)); // no-op
+      expect(GameLogic.pause(won), equals(won));
+      expect(GameLogic.resume(board()), equals(board()));
     });
   });
 }

@@ -17,81 +17,106 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_SCHEMA = SCRIPT_DIR.parent / "assets" / "level-schema-template.json"
-
-TEMPLATES = {
-    "coloring-shapes", "simple-platformer", "drag-and-drop-puzzle", "memory-cards",
-    "shape-matching", "endless-runner-lite", "tap-reaction",
+SUPPORTED_BUILTIN_KEYWORDS = {
+    "$schema", "title", "description", "default", "type", "required", "additionalProperties",
+    "properties", "items", "enum", "const", "pattern", "minimum", "maximum",
+    "exclusiveMinimum", "exclusiveMaximum", "minLength",
 }
-SHAPES = {"circle", "rect", "roundedRect", "triangle", "path", "icon"}
-GOAL_TYPES = {"reachGoal", "matchAll", "fillAll", "scoreAtLeast", "surviveTime", "placeAll"}
-HEX = re.compile(r"^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
-def is_number(v) -> bool:
-    return isinstance(v, (int, float)) and not isinstance(v, bool)
+def load_json_strict(path: Path):
+    def reject_constant(value: str):
+        raise ValueError(f"non-standard JSON constant {value!r}")
+
+    return json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
 
 
-def builtin_validate(level: dict) -> list[str]:
-    errs: list[str] = []
+def unsupported_schema_keywords(schema: dict, path: str = "<schema>") -> list[str]:
+    errors = [f"{path}: unsupported built-in keyword {key!r}" for key in schema if key not in SUPPORTED_BUILTIN_KEYWORDS]
+    properties = schema.get("properties", {})
+    if isinstance(properties, dict):
+        for key, child in properties.items():
+            if isinstance(child, dict):
+                errors.extend(unsupported_schema_keywords(child, f"{path}.properties.{key}"))
+    items = schema.get("items")
+    if isinstance(items, dict):
+        errors.extend(unsupported_schema_keywords(items, f"{path}.items"))
+    additional = schema.get("additionalProperties")
+    if isinstance(additional, dict):
+        errors.extend(unsupported_schema_keywords(additional, f"{path}.additionalProperties"))
+    return errors
 
-    def req(cond: bool, msg: str):
-        if not cond:
-            errs.append(msg)
+def is_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
-    if not isinstance(level, dict):
-        return ["top level must be an object"]
 
-    sv = level.get("schemaVersion")
-    req(isinstance(sv, int) and not isinstance(sv, bool) and sv >= 1, "schemaVersion must be an integer >= 1")
-    req(isinstance(level.get("id"), str) and level.get("id") != "", "id must be a non-empty string")
-    if "template" in level:
-        req(level["template"] in TEMPLATES, f"template must be one of {sorted(TEMPLATES)}")
+def matches_type(value, expected: str) -> bool:
+    return {
+        "object": isinstance(value, dict),
+        "array": isinstance(value, list),
+        "string": isinstance(value, str),
+        "integer": isinstance(value, int) and not isinstance(value, bool),
+        "number": is_number(value),
+        "boolean": isinstance(value, bool),
+        "null": value is None,
+    }.get(expected, False)
 
-    size = level.get("size")
-    req(isinstance(size, dict), "size must be an object with width and height")
-    if isinstance(size, dict):
-        req(is_number(size.get("width")) and size["width"] > 0, "size.width must be a number > 0")
-        req(is_number(size.get("height")) and size["height"] > 0, "size.height must be a number > 0")
 
-    if "palette" in level:
-        req(isinstance(level["palette"], list), "palette must be an array")
-        for i, c in enumerate(level.get("palette", [])):
-            req(isinstance(c, str) and bool(HEX.match(c)), f"palette[{i}] must be a #RRGGBB(AA) hex color")
+def builtin_validate(value, schema: dict, path: str = "<root>") -> list[str]:
+    """Validate the Draft-07 subset used by the canonical level schema."""
+    errors: list[str] = []
+    expected = schema.get("type")
+    expected_types = expected if isinstance(expected, list) else [expected] if expected else []
+    if expected_types and not any(matches_type(value, item) for item in expected_types):
+        return [f"{path}: must be {' or '.join(expected_types)}"]
 
-    entities = level.get("entities")
-    req(isinstance(entities, list), "entities must be an array")
-    for i, e in enumerate(entities or []):
-        if not isinstance(e, dict):
-            errs.append(f"entities[{i}] must be an object")
-            continue
-        req(isinstance(e.get("id"), str) and e.get("id") != "", f"entities[{i}].id must be a non-empty string")
-        req(isinstance(e.get("kind"), str) and e.get("kind") != "", f"entities[{i}].kind must be a non-empty string")
-        if "shape" in e:
-            req(e["shape"] in SHAPES, f"entities[{i}].shape must be one of {sorted(SHAPES)}")
-        if "color" in e:
-            req(isinstance(e["color"], str) and bool(HEX.match(e["color"])), f"entities[{i}].color must be a #RRGGBB(AA) hex")
-        if "position" in e:
-            p = e["position"]
-            req(isinstance(p, dict) and is_number(p.get("x")) and is_number(p.get("y")),
-                f"entities[{i}].position must be {{x:number, y:number}}")
-        if "path" in e:
-            req(isinstance(e["path"], list), f"entities[{i}].path must be an array of points")
-            for j, pt in enumerate(e.get("path", [])):
-                req(isinstance(pt, dict) and is_number(pt.get("x")) and is_number(pt.get("y")),
-                    f"entities[{i}].path[{j}] must be {{x:number, y:number}}")
+    if "const" in schema and value != schema["const"]:
+        errors.append(f"{path}: must equal {schema['const']!r}")
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path}: must be one of {schema['enum']!r}")
 
-    goal = level.get("goal")
-    if goal is not None:
-        req(isinstance(goal, dict), "goal must be an object")
-        if isinstance(goal, dict) and "type" in goal:
-            req(goal["type"] in GOAL_TYPES, f"goal.type must be one of {sorted(GOAL_TYPES)}")
-    return errs
+    if is_number(value):
+        if "minimum" in schema and value < schema["minimum"]:
+            errors.append(f"{path}: must be >= {schema['minimum']}")
+        if "maximum" in schema and value > schema["maximum"]:
+            errors.append(f"{path}: must be <= {schema['maximum']}")
+        if "exclusiveMinimum" in schema and value <= schema["exclusiveMinimum"]:
+            errors.append(f"{path}: must be > {schema['exclusiveMinimum']}")
+        if "exclusiveMaximum" in schema and value >= schema["exclusiveMaximum"]:
+            errors.append(f"{path}: must be < {schema['exclusiveMaximum']}")
+
+    if isinstance(value, str):
+        if "minLength" in schema and len(value) < schema["minLength"]:
+            errors.append(f"{path}: length must be >= {schema['minLength']}")
+        if "pattern" in schema and re.search(schema["pattern"], value) is None:
+            errors.append(f"{path}: must match {schema['pattern']!r}")
+
+    if isinstance(value, dict):
+        properties = schema.get("properties", {})
+        for required in schema.get("required", []):
+            if required not in value:
+                errors.append(f"{path}: missing required property {required!r}")
+        additional = schema.get("additionalProperties", {})
+        for key, item in value.items():
+            child_path = f"{path}.{key}" if path != "<root>" else key
+            if key in properties:
+                errors.extend(builtin_validate(item, properties[key], child_path))
+            elif additional is False:
+                errors.append(f"{path}: unknown property {key!r}")
+            elif isinstance(additional, dict):
+                errors.extend(builtin_validate(item, additional, child_path))
+
+    if isinstance(value, list) and isinstance(schema.get("items"), dict):
+        for index, item in enumerate(value):
+            errors.extend(builtin_validate(item, schema["items"], f"{path}[{index}]"))
+    return errors
 
 
 def collect(paths: list[str]) -> list[Path]:
@@ -111,19 +136,38 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Validate level JSON files against the level schema.")
     ap.add_argument("paths", nargs="+", help="Level JSON files and/or directories.")
     ap.add_argument("--schema", default=str(DEFAULT_SCHEMA))
+    ap.add_argument("--force-builtin", action="store_true", help="use the dependency-free validator")
     args = ap.parse_args(argv)
 
-    validator = None
     try:
-        import jsonschema  # type: ignore
-        schema = json.loads(Path(args.schema).read_text(encoding="utf-8"))
-        validator = jsonschema.Draft7Validator(schema)
-        mode = "jsonschema (full Draft-07)"
-    except ModuleNotFoundError:
-        mode = "built-in (dependency-free)"
-    except (OSError, json.JSONDecodeError) as exc:
+        schema = load_json_strict(Path(args.schema))
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"error: cannot load schema {args.schema}: {exc}", file=sys.stderr)
         return 2
+    if not isinstance(schema, dict):
+        print(f"error: schema must be a JSON object: {args.schema}", file=sys.stderr)
+        return 2
+
+    validator = None
+    if not args.force_builtin:
+        try:
+            import jsonschema  # type: ignore
+            jsonschema.Draft7Validator.check_schema(schema)
+            validator = jsonschema.Draft7Validator(schema)
+        except ModuleNotFoundError:
+            pass
+        except jsonschema.exceptions.SchemaError as exc:
+            print(f"error: invalid Draft-07 schema {args.schema}: {exc.message}", file=sys.stderr)
+            return 2
+    if validator is None:
+        unsupported = unsupported_schema_keywords(schema)
+        if unsupported:
+            print("error: built-in validator cannot safely evaluate this schema:", file=sys.stderr)
+            for error in unsupported:
+                print(f"  - {error}", file=sys.stderr)
+            print("Install jsonschema or use only the documented built-in subset.", file=sys.stderr)
+            return 2
+    mode = "jsonschema (full Draft-07)" if validator is not None else "built-in (schema-driven subset)"
 
     files = collect(args.paths)
     if not files:
@@ -134,8 +178,8 @@ def main(argv: list[str]) -> int:
     bad = 0
     for f in files:
         try:
-            level = json.loads(f.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+            level = load_json_strict(f)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
             print(f"  INVALID  {f}: not valid JSON: {exc}")
             bad += 1
             continue
@@ -143,7 +187,11 @@ def main(argv: list[str]) -> int:
             errors = [f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}"
                       for e in sorted(validator.iter_errors(level), key=lambda e: list(e.path))]
         else:
-            errors = builtin_validate(level)
+            try:
+                errors = builtin_validate(level, schema)
+            except (TypeError, ValueError, re.error) as exc:
+                print(f"error: built-in validator cannot evaluate schema {args.schema}: {exc}", file=sys.stderr)
+                return 2
         if errors:
             bad += 1
             print(f"  INVALID  {f}")

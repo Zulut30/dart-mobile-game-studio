@@ -23,7 +23,10 @@ class Runner {
 
   @override
   bool operator ==(Object other) =>
-      other is Runner && other.y == y && other.vy == vy && other.grounded == grounded;
+      other is Runner &&
+      other.y == y &&
+      other.vy == vy &&
+      other.grounded == grounded;
 
   @override
   int get hashCode => Object.hash(y, vy, grounded);

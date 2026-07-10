@@ -261,5 +261,5 @@ green run you didn't see (`references/quality-policy`, skill verification doctri
 - `references/asset-pipeline` — asset folders, resolution variants, JSON levels.
 - `references/accessibility-child-safety` — kids-safety baseline to honor from the start (offline,
   no tracking, minimal permissions) when picking org/platforms/deps.
-- Next workflows: `workflows/add-flame.md` (if motion/physics), the genre brief in
+- Next workflows: `workflows/setup-flame-project.md` (if motion/physics), the genre brief in
   `references/game-templates`, and `assets/{flame_game_template,flutter_game_widget_template}.dart`.

@@ -24,6 +24,8 @@ Flutter widgets sit on top for the HUD and game-over panel.
   `RunState` (not components), so there's no component churn to pool — the scene draws the list each frame.
 - **Model-notifier → overlay.** A `ValueNotifier<int>` score (disposed in `onRemove`) feeds a Flutter
   `ValueListenableBuilder` HUD with a `liveRegion` for screen readers.
+- **Complete lifecycle shell.** `menu → playing → paused → gameOver → menu`, explicit controls,
+  app-background auto-pause, accessible canvas action, and responsive constraint-driven overlays.
 
 ## Layout
 
@@ -31,7 +33,7 @@ Flutter widgets sit on top for the HUD and game-over panel.
 lib/
   main.dart
   models/                 PURE Dart — no Flame/Flutter import
-    game_phase.dart       menu | playing | gameOver  (no 'won' — it's infinite)
+    game_phase.dart       menu | playing | paused | gameOver  (no 'won' — it's infinite)
     run_config.dart       immutable tuning (speed, gravity, jump, sizes)
     runner.dart           player vertical state (y, vy, grounded)
     obstacle.dart         a scrolling obstacle (id, x, height)
@@ -41,10 +43,10 @@ lib/
     physics.dart          clampDt + semi-implicit Euler integrate
     spawner.dart          clearable gaps + heights from an injected Random
     collision.dart        AABB player-vs-obstacle
-    run_logic.dart        advance(state, dt, rng) / jump / start reducer
+    run_logic.dart        menu/start/advance/jump/pause/resume/quit reducer
   game/runner_game.dart   FlameGame: owns RunState, update(dt)→advance, data-driven _Scene
-  widgets/app.dart        GameWidget + HUD + game-over overlay (tap → jump)
-test/                     spawner, physics, collision, run_logic (pure, VM-tested)
+  widgets/app.dart        GameWidget + responsive HUD + menu/pause/result overlays
+test/                     pure VM, widget/lifecycle, and accessibility tests
 ```
 
 ## Run it
@@ -52,13 +54,15 @@ test/                     spawner, physics, collision, run_logic (pure, VM-teste
 ```bash
 flutter pub get
 flutter analyze                 # zero issues — proves the Flame layer compiles against real flame
-flutter test                    # pure-core unit tests (spawn/physics/collision/run-logic)
+dart test test/collision_test.dart test/physics_test.dart test/run_logic_test.dart test/spawner_test.dart
+flutter test                    # pure core + Flame/widget/lifecycle/a11y tests
 flutter run                     # play it
 ```
 
-CI (`.github/workflows/ci.yml`, the `example` job, matrix entry `endless_runner`) runs `flutter pub
-get` → `flutter analyze` → `flutter test` on every push — a green check is the end-to-end proof that
-the Flame-mode architecture compiles (against the real `flame` package) and the rules pass.
+CI (`.github/workflows/ci.yml`, matrix entry `endless_runner`) separately proves the pure core on
+the Dart VM, then analyzes/tests the real Flame shell. The weekly
+[`release-canary`](../../.github/workflows/release-canary.yml) builds Android AAB and unsigned iOS
+release outputs from disposable platform runners.
 
 > The Flame layer is deliberately thin (data-driven render, pure-Dart collision). Production Flame
 > games add `HasCollisionDetection` hitboxes, `ComponentPool` for component-per-entity spawners, and a

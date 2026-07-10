@@ -31,6 +31,10 @@ Run these in order. Skip a step only with a stated reason.
 
 1. **Understand the game request.** Genre, target age, core verb (tap / drag / match / move),
    win/lose vs no-fail, session length, platforms (iOS + Android), orientation.
+   For non-trivial repo work, run `scripts/ai-context-pack.py --markdown` first so the agent sees
+   project modes, commands, rules, references, agents, and current doctor findings before editing.
+   Then run `scripts/task-router.py "<task>"` to pick the right workflows, references, agents, and
+   required checks for the concrete request.
 2. **Generate a Mini-GDD.** Start from the closest genre brief in `templates/<genre>.md` (it ships a
    filled Mini-GDD + an architecture skeleton for the genre), then refine with `assets/gdd-template.md`.
    One page.
@@ -46,8 +50,9 @@ Run these in order. Skip a step only with a stated reason.
    imports*) from rendering. The core is unit-tested with `dart test` — no device. Choose state
    management for the shell (`ValueNotifier`/`ChangeNotifier`, Provider, or Riverpod/Bloc) and keep
    it thin over the model.
-5. **Implement the MVP.** Start from `assets/flame_game_template.dart` and/or
-   `assets/flutter_game_widget_template.dart`. Small files, modular folders
+5. **Implement the MVP.** Copy a complete model/renderer pair:
+   `assets/flame_game_model_template.dart` + `assets/flame_game_template.dart`, or
+   `assets/tile_game_model_template.dart` + `assets/flutter_game_widget_template.dart`. Small files, modular folders
    (`lib/models/`, `lib/systems/`, `lib/game/`, `lib/widgets/`, `assets/`). Recipes in
    `references/game-templates.md`. **Write excellent Dart** — meet the quality bar in
    `references/dart/README.md` and generate to the defaults in `references/common-pitfalls.md`
@@ -56,13 +61,19 @@ Run these in order. Skip a step only with a stated reason.
    deterministic (seeded) shuffles/spawns. `dart test` for the core; `flutter_test` for widgets.
 7. **Run build/test when available.** Use `scripts/verify-flutter-project.sh` to detect a project
    and run `dart analyze` + `dart test` (+ `flutter test`). If you cannot (no toolchain), say so and
-   give the exact commands — do not claim it passed. **In automated / long-running runs**, gate first
+   give the exact commands — exit `4` means unverified, not passed. The verifier does not resolve
+   dependencies by default; set `RESOLVE_DEPS=yes` only when an explicit `pub get` is intended.
+   **In automated / long-running runs**, gate first
    with `scripts/flutter-preflight.sh --require …` (environment + clean git), skip redundant installs
    with `scripts/pub-get-if-changed.sh`, fence any codegen/`clean`/build in `scripts/safe-run.sh`
    (savepoint → atomic commit on success / rollback on failure), and pipe failing build logs through
    `scripts/triage-log.py`. See `references/ci-and-automation.md`.
-8. **Review.** Run `scripts/dart-doctor.py <project>`, then sweep `references/common-pitfalls.md` (the
-   analyzer-invisible classes: layout constraints, Flame hot-path/lifecycle/collision, layering —
+8. **Review.** For a meaningful change, run `scripts/self-review-loop.py "<task>"` to refresh context,
+   route the task, and execute the available static/format/analyze/test checks as one honest report.
+   Use `--project <path>` when the task text does not name a project. The loop includes
+   `scripts/dart-doctor.py <project>` and `scripts/design-doctor.py <project>`; then sweep
+   `references/common-pitfalls.md` (the analyzer-invisible classes: layout constraints,
+   Flame hot-path/lifecycle/collision, layering —
    tag findings by code + severity) and walk `assets/review-checklist.md`: child safety, privacy,
    accessibility, performance. See `references/accessibility-child-safety.md`.
 9. **Handoff.** Report: what you built, chosen mode and why, **changed files**, **commands run with
@@ -159,20 +170,44 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
   `flutter-widgets-mastery.md`, `dart-memory-performance.md`, `dart-patterns-idioms.md`.
 
 ## Assets (copy & adapt)
-`assets/gdd-template.md`, `assets/level-schema-template.json`, `assets/flame_game_template.dart`,
-`assets/flutter_game_widget_template.dart`, `assets/seeded_random.dart`, `assets/analysis_options.yaml`,
+`assets/gdd-template.md`, `assets/level-schema-template.json`,
+`assets/flame_game_model_template.dart` + `assets/flame_game_template.dart`,
+`assets/tile_game_model_template.dart` + `assets/flutter_game_widget_template.dart`,
+`assets/seeded_random.dart`, `assets/analysis_options.yaml`,
 `assets/review-checklist.md`, `assets/privacy-checklist.md`,
 `assets/parallel-build.workflow.js` (tiered multi-model fan-out — see `references/model-routing.md`).
 
 ## Scripts
 - `scripts/sync-skill.sh` — mirror canonical skill into `.claude/` and `.cursor/` (`--check` for CI).
-- `scripts/verify-flutter-project.sh` — detect a Flutter/Dart project; run `dart analyze` + tests.
+- `scripts/ai-context-pack.py` — dependency-free AI context pack generator (`--markdown`, `--json`,
+  `--project`, `--no-findings`) so agents get repo shape, modes, commands, rules, refs, and findings.
+- `scripts/task-router.py` — token/phrase task-to-workflow router (`--markdown`, `--json`, `--project`)
+  that preserves compound intents and selects project, mode, workflows, references, templates,
+  agents, and required checks.
+- `scripts/router-eval.py` — versioned RU/EN routing eval (`evals/task-routing.jsonl`): minimum 95%
+  accuracy, 100% critical release/security cases, and full workflow/agent coverage.
+- `scripts/self-review-loop.py` — task-aware closed review loop (`--markdown`, `--json`, `--project`,
+  `--strict`, `--static-only`): refreshes context, routes work, runs known safe checks, and reports
+  evidence, skipped commands, actionable findings, and manual device-review gaps. Repository-audit
+  tasks verify every discovered project instead of silently selecting none.
+- `scripts/discover-projects.sh` — shared Dart/Flutter `pubspec.yaml` discovery for single-project
+  apps and multi-example repos (`--all`, `--dirs`, `--json`).
+- `scripts/doc-doctor.py` — canonical Markdown-link and inline skill-path integrity gate
+  (`--json`), including backticked references that ordinary link checkers miss.
+- `scripts/verify-flutter-project.sh` — source-preserving project detection, format, analyze, and tests;
+  dependency resolution is explicit (`RESOLVE_DEPS=yes`) and missing SDK exits unverified (`4`).
 - `scripts/scaffold-game-module.py` — non-destructive buildable Dart package skeleton for a genre.
-- `scripts/validate-skill.sh` — structural quality gate (frontmatter, sync, JSON, formats).
-- `scripts/validate-levels.py` — validate level JSON against `level-schema-template.json`.
+- `scripts/materialize-template-fixtures.py` — creates disposable VM-only, Flutter-widgets, and Flame
+  projects so CI compiles/tests the exact canonical model/renderer pairs.
+- `scripts/validate-skill.sh` — structural and critical CLI contract gate (frontmatter, sync, JSON,
+  documentation integrity, syntax without bytecode writes, black-box safety/routing/schema tests).
+- `scripts/validate-levels.py` — schema-driven level validation against
+  `level-schema-template.json`; the dependency-free path enforces the same used Draft-07 keywords.
 - `scripts/dart-doctor.py` — project health-check CLI (the analog of swift-doctor / `flutter doctor`
   for *project quality*): environment, architecture, Dart quality, performance, kids-safety,
   accessibility, assets/licensing, build/tests.
+- `scripts/design-doctor.py` — static UX/a11y/game-design gate: screen map, tap semantics,
+  Reduce Motion, responsive layout, visual states, Flame overlays, kids UX, a11y test hooks.
 
 ### Safe automation (use in automated / long-running runs) — see `references/ci-and-automation.md`
 - `scripts/flutter-preflight.sh` — run FIRST: gate the toolchain (`--require dart,flutter,android,xcode`),
@@ -181,7 +216,8 @@ accounts, or analytics. State these in the Mini-GDD and handoff.
 - `scripts/safe-run.sh` — fence a destructive/generative command (build_runner, `flutter clean`) in a
   git savepoint: `--stash` → run → `--commit` atomic `chore(auto):` commit on success, or auto
   rollback (`reset --hard` + `clean -fd`) on failure. `--triage` summarizes a failing log. The net
-  only auto-rolls-back when it can prove no work is lost.
+  is fail-closed outside a committed git repository, rejects `--allow-dirty --commit`, and only
+  auto-rolls-back when it can prove no work is lost.
 - `scripts/triage-log.py` — distill a 1000s-line Gradle/Xcode/Dart build log to ~10–25 high-signal
   lines + a ranked likely-cause list (so a small model gets a clean input, not 2000 lines of noise).
 - `scripts/pub-get-if-changed.sh` — skip `pub get` when `pubspec.lock` is unchanged (hash cached in
@@ -223,8 +259,10 @@ decision criteria, concrete commands, code snippets, and common pitfalls:
 ## Worked examples (both buildable, tested, CI-green)
 - `examples/memory_match/` — **widgets mode**: memory match. Pure-Dart core (`lib/models/`+`lib/systems/`,
   no Flutter import, unit-tested) under a thin widget UI; immutable value types, a `(state, action) -> state`
-  reducer, injected `SeededRandom`, `Semantics`, kids-safe.
+  reducer, injected `SeededRandom`, lifecycle pause, responsive grid, `Semantics`, kids-safe.
 - `examples/endless_runner/` — **Flame mode**: lite endless runner. Pure-Dart core (spawn/physics/
   collision rules, no Flame/Flutter import) under a thin `FlameGame`; clamped `dt`, clearable seeded
-  spawns, frame-rate independence, AABB collision, no per-frame allocation, `ValueNotifier` HUD.
-- CI's `example` job runs `flutter analyze` + `flutter test` on **both** (matrix). Copy whichever mode fits.
+  spawns, full menu/pause/game-over lifecycle, responsive overlays, frame-rate independence, AABB
+  collision, no per-frame allocation, `ValueNotifier` HUD.
+- CI runs VM-only core tests plus `flutter analyze`/`flutter test` on both; the release canary builds
+  Android AAB and unsigned iOS release outputs from disposable platform runners.

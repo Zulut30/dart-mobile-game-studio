@@ -1,7 +1,7 @@
 import 'package:endless_runner/models/run_config.dart';
 import 'package:endless_runner/systems/seeded_random.dart';
 import 'package:endless_runner/systems/spawner.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Spawner', () {
@@ -17,15 +17,21 @@ void main() {
       }
     });
 
-    test('gap is at least the jump air-time times speed (never un-jumpable)', () {
-      const c = RunConfig();
-      final rng = SeededRandom(1);
-      final airTime = 2 * c.jumpVelocity / c.gravity;
-      final minGap = airTime * c.baseSpeed + c.playerSize * 3;
-      for (var i = 0; i < 50; i++) {
-        expect(Spawner.nextGap(rng, c.baseSpeed, c), greaterThanOrEqualTo(minGap));
-      }
-    });
+    test(
+      'gap is at least the jump air-time times speed (never un-jumpable)',
+      () {
+        const c = RunConfig();
+        final rng = SeededRandom(1);
+        final airTime = 2 * c.jumpVelocity / c.gravity;
+        final minGap = airTime * c.baseSpeed + c.playerSize * 3;
+        for (var i = 0; i < 50; i++) {
+          expect(
+            Spawner.nextGap(rng, c.baseSpeed, c),
+            greaterThanOrEqualTo(minGap),
+          );
+        }
+      },
+    );
 
     test('is deterministic for a seed', () {
       const c = RunConfig();

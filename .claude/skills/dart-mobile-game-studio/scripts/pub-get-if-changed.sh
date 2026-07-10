@@ -14,6 +14,7 @@
 # Usage:
 #   scripts/pub-get-if-changed.sh                 # discover project; pub get only if inputs changed
 #   scripts/pub-get-if-changed.sh --root path/to/app
+#   scripts/pub-get-if-changed.sh --all           # process every discovered project
 #   scripts/pub-get-if-changed.sh --check-only    # don't run; exit 0 = up-to-date, 10 = stale
 #   scripts/pub-get-if-changed.sh --force         # always run pub get and refresh the cache
 #
@@ -24,11 +25,14 @@ set -uo pipefail
 ROOT="$(pwd)"
 CHECK_ONLY="no"
 FORCE="no"
+ALL="auto"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --root) ROOT="${2:?--root needs a path}"; shift 2 ;;
     --root=*) ROOT="${1#*=}"; shift ;;
+    --all) ALL="yes"; shift ;;
     --check-only) CHECK_ONLY="yes"; shift ;;
     --force) FORCE="yes"; shift ;;
     -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
@@ -36,14 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# locate the project (nearest pubspec.yaml under ROOT)
-PUBSPEC="$(find "${ROOT}" -maxdepth 3 -name pubspec.yaml -not -path '*/.*' 2>/dev/null | head -n 1 || true)"
-if [[ -z "${PUBSPEC}" ]]; then
+pubspecs=()
+while IFS= read -r p; do
+  [[ -n "${p}" ]] && pubspecs+=("${p}")
+done < <("${SCRIPT_DIR}/discover-projects.sh" --root "${ROOT}" --all)
+if [[ ${#pubspecs[@]} -eq 0 ]]; then
   echo "no pubspec.yaml under ${ROOT} — nothing to resolve (scaffold with flutter/dart create first)" >&2
   exit 0
 fi
-PKG_DIR="$(dirname "${PUBSPEC}")"
-IS_FLUTTER="no"; grep -qE '^\s*flutter\s*:' "${PUBSPEC}" 2>/dev/null && IS_FLUTTER="yes"
+
+root_abs="$(cd "${ROOT}" && pwd)"
+if [[ "${ALL}" != "yes" && -f "${root_abs}/pubspec.yaml" ]]; then
+  pubspecs=("${root_abs}/pubspec.yaml")
+elif [[ "${ALL}" == "no" ]]; then
+  pubspecs=("${pubspecs[0]}")
+fi
 
 # portable sha256 over the dependency-defining files
 sha_of() {
@@ -54,42 +65,52 @@ sha_of() {
   else cksum "${f}" | awk '{print $1"-"$2}'; fi   # weak fallback, still change-detecting
 }
 
-HASH_NOW="$(sha_of "${PKG_DIR}/pubspec.yaml")-$(sha_of "${PKG_DIR}/pubspec.lock")"
-CACHE="${PKG_DIR}/.dart_tool/.skill_pub_hash"
-RESOLVED="${PKG_DIR}/.dart_tool/package_config.json"
-HASH_WAS="$( [[ -f "${CACHE}" ]] && cat "${CACHE}" 2>/dev/null || echo "" )"
+exit_code=0
 
-is_up_to_date() {
-  [[ "${FORCE}" == "no" ]] && [[ -f "${RESOLVED}" ]] && [[ -n "${HASH_WAS}" ]] && [[ "${HASH_WAS}" == "${HASH_NOW}" ]]
-}
+for PUBSPEC in "${pubspecs[@]}"; do
+  PKG_DIR="$(dirname "${PUBSPEC}")"
+  IS_FLUTTER="no"; grep -qE '^\s*flutter\s*:' "${PUBSPEC}" 2>/dev/null && IS_FLUTTER="yes"
 
-if is_up_to_date; then
-  echo "deps up-to-date (pubspec.lock unchanged, packages resolved) — skipping pub get"
-  exit 0
-fi
+  HASH_NOW="$(sha_of "${PKG_DIR}/pubspec.yaml")-$(sha_of "${PKG_DIR}/pubspec.lock")"
+  CACHE="${PKG_DIR}/.dart_tool/.skill_pub_hash"
+  RESOLVED="${PKG_DIR}/.dart_tool/package_config.json"
+  HASH_WAS="$( [[ -f "${CACHE}" ]] && cat "${CACHE}" 2>/dev/null || echo "" )"
 
-if [[ "${CHECK_ONLY}" == "yes" ]]; then
-  echo "deps STALE — pub get needed (lock changed or packages not resolved)"
-  exit 10
-fi
+  if [[ "${FORCE}" == "no" && -f "${RESOLVED}" && -n "${HASH_WAS}" && "${HASH_WAS}" == "${HASH_NOW}" ]]; then
+    echo "${PKG_DIR}: deps up-to-date (pubspec.lock unchanged, packages resolved) — skipping pub get"
+    continue
+  fi
 
-# choose driver and run the project's own pub get
-if [[ "${IS_FLUTTER}" == "yes" ]] && command -v flutter >/dev/null 2>&1; then DRV="flutter"
-elif command -v dart >/dev/null 2>&1; then DRV="dart"
-else
-  echo "toolchain absent — run in ${PKG_DIR}:  ${IS_FLUTTER:+flutter }pub get" >&2
-  exit 1
-fi
+  if [[ "${CHECK_ONLY}" == "yes" ]]; then
+    echo "${PKG_DIR}: deps STALE — pub get needed (lock changed or packages not resolved)"
+    exit_code=10
+    continue
+  fi
 
-echo "+ (cd ${PKG_DIR} && ${DRV} pub get)"
-if ( cd "${PKG_DIR}" && "${DRV}" pub get ); then
-  # refresh the cache only on success, and only with the POST-resolution lock hash
-  HASH_AFTER="$(sha_of "${PKG_DIR}/pubspec.yaml")-$(sha_of "${PKG_DIR}/pubspec.lock")"
-  mkdir -p "${PKG_DIR}/.dart_tool"
-  printf '%s' "${HASH_AFTER}" > "${CACHE}"
-  echo "pub get OK — dependency hash cached for next run"
-  exit 0
-else
-  echo "pub get FAILED" >&2
-  exit 1
-fi
+  # choose driver and run the project's own pub get
+  if [[ "${IS_FLUTTER}" == "yes" ]] && command -v flutter >/dev/null 2>&1; then DRV="flutter"
+  elif command -v dart >/dev/null 2>&1; then DRV="dart"
+  else
+    if [[ "${IS_FLUTTER}" == "yes" ]]; then
+      echo "toolchain absent — run in ${PKG_DIR}:  flutter pub get" >&2
+    else
+      echo "toolchain absent — run in ${PKG_DIR}:  dart pub get" >&2
+    fi
+    exit_code=1
+    continue
+  fi
+
+  echo "+ (cd ${PKG_DIR} && ${DRV} pub get)"
+  if ( cd "${PKG_DIR}" && "${DRV}" pub get ); then
+    # refresh the cache only on success, and only with the POST-resolution lock hash
+    HASH_AFTER="$(sha_of "${PKG_DIR}/pubspec.yaml")-$(sha_of "${PKG_DIR}/pubspec.lock")"
+    mkdir -p "${PKG_DIR}/.dart_tool"
+    printf '%s' "${HASH_AFTER}" > "${CACHE}"
+    echo "${PKG_DIR}: pub get OK — dependency hash cached for next run"
+  else
+    echo "${PKG_DIR}: pub get FAILED" >&2
+    exit_code=1
+  fi
+done
+
+exit "${exit_code}"
