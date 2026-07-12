@@ -12,7 +12,8 @@ The project follows Semantic Versioning:
 - major: installation layout, canonical contracts, or behavior requiring user
   migration.
 
-`VERSION`, `CHANGELOG.md`, the signed Git tag, and the GitHub Release must agree.
+`VERSION`, `CHANGELOG.md`, the annotated Git tag, and the GitHub Release must agree.
+Sign the tag when a trusted signing key is configured.
 
 ## Release candidate
 
@@ -42,10 +43,11 @@ scripts/smoke-install.sh \
 
 ## Publish
 
-Create a signed tag from the verified `main` commit:
+Create an annotated tag from the verified `main` commit. Use `git tag -s` instead
+when a trusted signing key is configured:
 
 ```bash
-git tag -s "v$(cat VERSION)" -m "Dart Mobile Game Studio v$(cat VERSION)"
+git tag -a "v$(cat VERSION)" -m "Dart Mobile Game Studio v$(cat VERSION)"
 git push origin "v$(cat VERSION)"
 ```
 
