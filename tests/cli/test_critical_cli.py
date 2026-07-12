@@ -26,6 +26,7 @@ MATERIALIZE_FIXTURES = SCRIPTS / "materialize-template-fixtures.py"
 CI_WORKFLOW = REPO_ROOT / ".github/workflows/ci.yml"
 RELEASE_CANARY = REPO_ROOT / ".github/workflows/release-canary.yml"
 RELEASE_WORKFLOW = REPO_ROOT / ".github/workflows/release.yml"
+INSTALLER = REPO_ROOT / "scripts/install.sh"
 BASH = shutil.which("bash") or "/bin/bash"
 
 
@@ -151,6 +152,28 @@ class SafeRunTests(unittest.TestCase):
         self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
         self.assertTrue((repo / "generated.txt").exists())
         self.assertEqual(git(repo, "rev-list", "--count", "HEAD").stdout.strip(), "1")
+
+
+class InstallerTests(unittest.TestCase):
+    def test_conflict_is_detected_before_any_files_are_copied(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "project"
+            conflict = target / ".agents/agents"
+            conflict.mkdir(parents=True)
+            marker = conflict / "project-owned.txt"
+            marker.write_text("keep\n", encoding="utf-8")
+
+            result = run(
+                [BASH, INSTALLER, "--tool", "codex", "--target", target],
+                cwd=REPO_ROOT,
+            )
+
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertFalse(
+                (target / ".agents/skills/dart-mobile-game-studio").exists()
+            )
+            self.assertFalse((target / ".dart-mobile-game-studio-install").exists())
+            self.assertEqual(marker.read_text(encoding="utf-8"), "keep\n")
 
 
 class VerifyProjectTests(unittest.TestCase):

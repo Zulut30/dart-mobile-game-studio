@@ -96,6 +96,45 @@ mkdir -p "$TARGET"
 
 backup_root="$TARGET/.dart-mobile-game-studio-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 declare -a installed=()
+declare -a selected=()
+
+select_tree() {
+  selected+=("$1")
+}
+
+select_codex() {
+  select_tree ".agents/skills/dart-mobile-game-studio"
+  select_tree ".agents/agents"
+  select_tree ".codex/agents"
+}
+
+select_claude() {
+  select_tree ".claude/skills/dart-mobile-game-studio"
+  select_tree ".claude/agents"
+}
+
+select_cursor() {
+  select_tree ".cursor/skills/dart-mobile-game-studio"
+  select_tree ".cursor/rules"
+}
+
+case "$TOOL" in
+  codex) select_codex ;;
+  claude) select_claude ;;
+  cursor) select_cursor ;;
+  all)
+    select_codex
+    select_claude
+    select_cursor
+    ;;
+esac
+
+for relative in "${selected[@]}"; do
+  [[ -e "$ROOT/$relative" ]] || die "distribution path is missing: $relative"
+  if [[ -e "$TARGET/$relative" ]] && ((FORCE == 0)); then
+    die "$TARGET/$relative already exists; rerun with --force to back it up"
+  fi
+done
 
 copy_tree() {
   local relative=$1
@@ -124,32 +163,9 @@ copy_tree() {
   installed+=("$relative")
 }
 
-install_codex() {
-  copy_tree ".agents/skills/dart-mobile-game-studio"
-  copy_tree ".agents/agents"
-  copy_tree ".codex/agents"
-}
-
-install_claude() {
-  copy_tree ".claude/skills/dart-mobile-game-studio"
-  copy_tree ".claude/agents"
-}
-
-install_cursor() {
-  copy_tree ".cursor/skills/dart-mobile-game-studio"
-  copy_tree ".cursor/rules"
-}
-
-case "$TOOL" in
-  codex) install_codex ;;
-  claude) install_claude ;;
-  cursor) install_cursor ;;
-  all)
-    install_codex
-    install_claude
-    install_cursor
-    ;;
-esac
+for relative in "${selected[@]}"; do
+  copy_tree "$relative"
+done
 
 if ((DRY_RUN == 0)); then
   printf '%s\n' "${installed[@]}" | awk '!seen[$0]++' > "$MANIFEST"

@@ -57,7 +57,7 @@ installer.
 Download the `skill-only` archive and `SHA256SUMS` from the release page, then:
 
 ```bash
-shasum -a 256 -c SHA256SUMS
+shasum -a 256 -c <(grep 'dart-mobile-game-studio-skill-only-v1.0.0.zip$' SHA256SUMS)
 unzip dart-mobile-game-studio-skill-only-v1.0.0.zip
 cd dart-mobile-game-studio-1.0.0
 ./scripts/install.sh --tool all --target /path/to/project
