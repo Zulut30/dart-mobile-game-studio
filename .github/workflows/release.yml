@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-package:
+    name: Verify and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify tag and version
+        run: test "${GITHUB_REF_NAME}" = "v$(cat VERSION)"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Validate skill and contracts
+        run: .agents/skills/dart-mobile-game-studio/scripts/validate-skill.sh
+      - name: Verify Memory Match
+        working-directory: examples/memory_match
+        run: |
+          flutter pub get
+          dart format --output=none --set-exit-if-changed .
+          flutter analyze --fatal-infos
+          flutter test
+      - name: Verify Endless Runner
+        working-directory: examples/endless_runner
+        run: |
+          flutter pub get
+          dart format --output=none --set-exit-if-changed .
+          flutter analyze --fatal-infos
+          flutter test
+      - name: Package release archives
+        run: scripts/package-release.sh
+      - name: Smoke-test packaged installation
+        run: scripts/smoke-install.sh --archive "dist/dart-mobile-game-studio-skill-only-v$(cat VERSION).zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: dist/
+          if-no-files-found: error
+
+  mobile-canary:
+    name: ${{ matrix.platform }} release (${{ matrix.project }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: android
+            project: memory_match
+          - os: ubuntu-latest
+            platform: android
+            project: endless_runner
+          - os: macos-latest
+            platform: ios
+            project: memory_match
+          - os: macos-latest
+            platform: ios
+            project: endless_runner
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Create disposable platform runner
+        run: |
+          PROJECT_DIR="${RUNNER_TEMP}/${{ matrix.project }}_${{ matrix.platform }}"
+          cp -R "examples/${{ matrix.project }}" "${PROJECT_DIR}"
+          cd "${PROJECT_DIR}"
+          flutter create --no-pub --platforms=${{ matrix.platform }} \
+            --project-name "${{ matrix.project }}" \
+            --org dev.dartmobilegamestudio .
+          flutter pub get
+      - name: Build Android AAB
+        if: matrix.platform == 'android'
+        run: |
+          cd "${RUNNER_TEMP}/${{ matrix.project }}_${{ matrix.platform }}"
+          flutter build appbundle --release --no-pub
+          test -n "$(find build/app/outputs/bundle/release -type f -name '*.aab' -size +0c -print -quit)"
+      - name: Build unsigned iOS release
+        if: matrix.platform == 'ios'
+        run: |
+          cd "${RUNNER_TEMP}/${{ matrix.project }}_${{ matrix.platform }}"
+          flutter build ios --release --no-codesign --no-pub
+          test -n "$(find build/ios/iphoneos -maxdepth 1 -type d -name '*.app' -print -quit)"
+
+  publish:
+    name: Publish GitHub Release
+    needs: [verify-and-package, mobile-canary]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Create immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}"
+          release-assets/*
+          --repo "${GITHUB_REPOSITORY}"
+          --verify-tag
+          --generate-notes
+          --title "Dart Mobile Game Studio ${GITHUB_REF_NAME}"

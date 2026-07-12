@@ -1,12 +1,13 @@
 name: CI
 
-# Five gates:
+# Six gates:
 #   1. structure — frontmatter/sync/JSON/script-syntax of the skill package (pure python/bash).
 #   2. cli-contracts — black-box safety/exit-code/schema/routing tests on Linux and macOS.
 #   3. ai-routing — RU/EN task routing accuracy + full workflow/agent coverage.
 #   4. generated-contracts — format/compile/test Dart, widgets, Flame templates, and scaffold output.
 #   5. example   — format/analyze/test both reference games on a real Flutter SDK,
 #                  which is the end-to-end proof the skill's doctrine produces working code.
+#   6. distribution — package tracked release archives and prove clean install/uninstall.
 
 on:
   push:
@@ -26,7 +27,7 @@ jobs:
     name: Validate skill, agents & structure
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # frontmatter/name==folder, skill+agent sync --check, JSON validity, script syntax,
       # and the Cursor globs-format check. Pure python/bash — no Dart toolchain needed.
@@ -42,7 +43,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run black-box CLI tests
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/cli -p 'test_*.py' -v
 
@@ -51,9 +52,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Enforce routing quality threshold
         run: .agents/skills/dart-mobile-game-studio/scripts/router-eval.py
+
+  distribution:
+    name: Release archive and clean install
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build deterministic release archives
+        run: scripts/package-release.sh
+      - name: Verify checksums
+        working-directory: dist
+        run: sha256sum --check SHA256SUMS
+      - name: Smoke-test packaged installation
+        run: scripts/smoke-install.sh --archive "dist/dart-mobile-game-studio-skill-only-v$(cat VERSION).zip"
 
   generated-contracts:
     name: Generated contract (${{ matrix.fixture }})
@@ -64,7 +79,7 @@ jobs:
       matrix:
         fixture: [pure_models, widgets, flame, scaffold_contract]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -107,7 +122,7 @@ jobs:
       run:
         working-directory: examples/${{ matrix.project }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

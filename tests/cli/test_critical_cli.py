@@ -25,6 +25,7 @@ SCAFFOLD = SCRIPTS / "scaffold-game-module.py"
 MATERIALIZE_FIXTURES = SCRIPTS / "materialize-template-fixtures.py"
 CI_WORKFLOW = REPO_ROOT / ".github/workflows/ci.yml"
 RELEASE_CANARY = REPO_ROOT / ".github/workflows/release-canary.yml"
+RELEASE_WORKFLOW = REPO_ROOT / ".github/workflows/release.yml"
 BASH = shutil.which("bash") or "/bin/bash"
 
 
@@ -601,6 +602,17 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("flutter create --no-pub --platforms=android", source)
         self.assertIn("flutter build appbundle --release --no-pub", source)
         self.assertIn("flutter create --no-pub --platforms=ios", source)
+        self.assertIn("flutter build ios --release --no-codesign --no-pub", source)
+
+    def test_tag_release_is_gated_by_packaging_install_and_mobile_builds(self) -> None:
+        source = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('tags:', source)
+        self.assertIn('"v*"', source)
+        self.assertIn("scripts/package-release.sh", source)
+        self.assertIn("scripts/smoke-install.sh --archive", source)
+        self.assertIn("needs: [verify-and-package, mobile-canary]", source)
+        self.assertIn("gh release create", source)
+        self.assertIn("flutter build appbundle --release --no-pub", source)
         self.assertIn("flutter build ios --release --no-codesign --no-pub", source)
 
 

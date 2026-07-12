@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a focused improvement to the production game workflow.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Which user or agent workflow is currently blocked or inefficient?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe inputs, outputs, checks, and affected host tools.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and risks
+      description: Include dependency, privacy, compatibility, or store-policy tradeoffs.

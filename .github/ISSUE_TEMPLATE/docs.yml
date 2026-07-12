@@ -1,0 +1,18 @@
+name: Documentation problem
+description: Report missing, stale, confusing, or broken documentation.
+title: "[Docs]: "
+labels: [documentation]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      placeholder: README.md, SKILL.md, references/..., workflow/...
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should change?
+    validations:
+      required: true

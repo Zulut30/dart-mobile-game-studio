@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [dependencies, ci]
+  - package-ecosystem: pub
+    directory: /examples/memory_match
+    schedule:
+      interval: monthly
+    labels: [dependencies, dart]
+  - package-ecosystem: pub
+    directory: /examples/endless_runner
+    schedule:
+      interval: monthly
+    labels: [dependencies, dart]
