@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible defect in the skill, scripts, templates, or examples.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options: [Codex, Claude Code, Cursor, Skill scripts, Memory Match example, Endless Runner example, CI or release]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest safe sequence that reproduces the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, host tool, Flutter/Dart versions, and relevant dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Logs or evidence
+      description: Remove secrets, signing material, personal data, and private assets.

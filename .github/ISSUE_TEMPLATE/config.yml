@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/Zulut30/dart-mobile-game-studio/discussions
+    about: Use Discussions for support, design ideas, and open-ended questions.
+  - name: Private security report
+    url: https://github.com/Zulut30/dart-mobile-game-studio/security/advisories/new
+    about: Report vulnerabilities and sensitive automation problems privately.

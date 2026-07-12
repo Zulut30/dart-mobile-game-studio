@@ -28,7 +28,7 @@ jobs:
       matrix:
         project: [memory_match, endless_runner]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -59,7 +59,7 @@ jobs:
       matrix:
         project: [memory_match, endless_runner]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

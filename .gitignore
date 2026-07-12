@@ -4,7 +4,8 @@
 .pub-cache/
 .pub/
 build/
-pubspec.lock          # apps may commit this; libraries should not — uncomment per project
+# Example packages resolve in CI; downstream apps may choose to commit their lockfile.
+pubspec.lock
 **/doc/api/
 *.dart.js
 *.info.json
@@ -32,6 +33,9 @@ android/key.properties        # never commit signing secrets
 *.ipa
 *.apk
 *.aab
+
+# ---- Release artifacts ----
+dist/
 
 # ---- macOS / editors ----
 .DS_Store
